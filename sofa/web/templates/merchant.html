@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ m.name }} · SOFA admin{% endblock %}
+{% block body %}
+<h1>{{ m.name }} <span class="pill {{ 'ok' if m.status == 'active' else 'warn' }}">{{ m.status }}</span></h1>
+<p><a class="btn small" href="/admin/merchants/{{ m.id }}/products">Catalog ({{ n_products }})</a>
+   <a class="btn small ghost" href="/admin/orders?merchant={{ m.id }}">Orders ({{ n_orders }})</a></p>
+
+<form class="card" method="post" action="/admin/merchants/{{ m.id }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h3>Settings</h3>
+  <div class="row">
+    <div><label>Business name</label><input type="text" name="name" value="{{ m.name }}" required></div>
+    <div><label>Category</label><input type="text" name="category" value="{{ m.category }}"></div>
+    <div><label>Greeting language</label><select name="default_language">{% for l in languages %}<option value="{{ l }}" {{ 'selected' if l == m.default_language }}>{{ l }}</option>{% endfor %}</select></div>
+    <div><label>Payment</label><select name="payment_mode">{% for x in modes %}<option value="{{ x }}" {{ 'selected' if x == m.payment_mode }}>{{ x|replace("_", " ") }}</option>{% endfor %}</select></div>
+    <div><label>Status</label><select name="status"><option {{ 'selected' if m.status == 'active' }}>active</option><option {{ 'selected' if m.status == 'paused' }}>paused</option></select></div>
+  </div>
+  <h3>Daily report to the owner</h3>
+  <div class="row">
+    <div><label class="inline"><input type="checkbox" name="report_enabled" {{ 'checked' if m.report_enabled }}> text the owner a short report every day</label></div>
+    <div><label>Time (Lagos, 24-hour)</label><input type="text" name="report_time" value="{{ m.report_time }}" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" style="max-width:110px"></div>
+  </div>
+  <p class="small">Sent to the owner's phone as one SMS. Skipped on days with no orders, missed requests or waiting callers. The owner can also call the shop number and ask "how did we do today?".</p>
+  <h3>Settlement (where customer payments go)</h3>
+  <div class="row">
+    <div><label>Bank code</label><input type="text" name="settlement_bank_code" value="{{ m.settlement_bank_code or '' }}"></div>
+    <div><label>Account number</label><input type="text" name="settlement_account_number" value="{{ m.settlement_account_number or '' }}"></div>
+    <div><label>Paystack subaccount code</label><input type="text" name="paystack_subaccount_code" value="{{ m.paystack_subaccount_code or '' }}" placeholder="ACCT_..."></div>
+  </div>
+  <p class="muted small">Not automated yet: verify the account with Paystack account resolution and create the subaccount in the Paystack dashboard, then paste its code here. Without a subaccount code, funds do not settle to this merchant.</p>
+  <button>Save</button>
+</form>
+
+<div class="card">
+  <h3>Today's report, as it would be texted now</h3>
+  <pre>{{ report_preview }}</pre>
+  <p class="muted small">{{ report_preview|length }} of 160 characters (one SMS). This preview includes team test calls; the 7 PM report does not.</p>
+  <form method="post" action="/admin/merchants/{{ m.id }}/report/send" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost small">Send this sample to the owner now</button></form>
+  {% if recent_reports %}<h3>Recent reports</h3>
+  <ul class="plain small">{% for r in recent_reports %}<li>{{ r.day }}: <span class="pill {{ 'ok' if r.status == 'sent' else 'warn' }}">{{ r.status|replace("_", " ") }}</span> {{ r.body or "" }}</li>{% endfor %}</ul>{% endif %}
+</div>
+
+<div class="row">
+  <div class="card"><h3>Numbers</h3>
+    <ul class="plain">{% for n in numbers %}<li>{{ n.e164 }} {% if not n.active %}<span class="pill warn">inactive</span>{% endif %}</li>{% else %}<li class="muted">none</li>{% endfor %}</ul>
+    <form method="post" action="/admin/merchants/{{ m.id }}/numbers"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>Add a number</label><input type="text" name="number" placeholder="+234..."><p><button class="small">Add</button></p></form>
+    <p class="muted small">Callbacks: inbound <code>/voice/inbound/&lt;secret&gt;</code>, events <code>/voice/events/&lt;secret&gt;</code>.</p></div>
+  <div class="card"><h3>People</h3>
+    <ul class="plain">{% for u in users %}<li>{{ u.name }} ({{ u.role }}) {{ u.phone }} {% if u.can_update_stock %}<span class="pill ok">updates stock</span>{% endif %}</li>{% endfor %}</ul>
+    <form method="post" action="/admin/merchants/{{ m.id }}/users"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>Name</label><input type="text" name="name" required><label>Phone</label><input type="text" name="phone" required>
+      <label>Role</label><select name="role"><option>staff</option><option>owner</option></select>
+      <p><label class="inline"><input type="checkbox" name="can_update_stock"> can update stock by voice</label></p><button class="small">Add person</button></form></div>
+</div>
+{% endblock %}

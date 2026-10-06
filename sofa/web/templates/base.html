@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ brand|default("SOFA admin") }}{% endblock %}</title>
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="/static/ci-mark-red.png" type="image/png">
+<link rel="preload" href="/static/fonts/poppins-300.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/fonts/poppins-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/ci.css">
+<script>try{var t=localStorage.getItem("ci-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script src="/static/ci.js" defer></script>
+{% block head %}{% endblock %}
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+<header class="site-header">
+  <div class="frame"><div class="bar">
+    <a class="brand" href="{{ home_url|default('/admin/home') }}" aria-label="{{ brand|default('SOFA admin') }}: home">
+      <img src="/static/ci-mark-red.png" width="52" height="26" alt="">
+      <span><span class="name">{{ brand|default("SOFA admin") }}</span><span class="by">by Connected Intelligence</span></span>
+    </a>
+    {% if active is defined and active != "" %}
+    <button class="menu-toggle ghost small" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav class="nav" id="site-nav" aria-label="Console sections">
+      {% for key, label, href in nav_items|default([("home","Home","/admin/home"),("dashboard","Dashboard","/admin"),("merchants","Merchants","/admin/merchants"),("orders","Orders","/admin/orders"),("handoffs","Handoffs","/admin/handoffs"),("calls","Calls","/admin/calls"),("label","Label","/admin/label"),("metrics","Metrics","/admin/metrics"),("languages","Languages","/admin/languages")]) %}
+        <a href="{{ href }}" {% if active == key %}aria-current="page"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    {% endif %}
+    <div class="tools">
+      {% if footer_kind|default("internal") == "internal" %}<a class="btn ghost small" href="/admin/home">Admin home</a>{% endif %}
+      <button class="ghost small" type="button" data-theme-toggle aria-pressed="false" title="Switch between the dark theme (Ink) and the light theme (Paper)">Switch theme</button>
+      {% if active is defined and active != "" %}
+      <form class="inline" method="post" action="{{ logout_url|default('/admin/logout') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost small">Log out</button></form>
+      {% endif %}
+    </div>
+  </div></div>
+</header>
+{% block hero %}{% endblock %}
+<main id="main" class="frame">
+  {% if default_password and active %}<div class="flash warn" role="status"><b>This console still uses the demo password.</b> Anyone who knows it can log in. Set a long random one (<code>ADMIN_TOKEN</code>, <code>PROVIDER_TOKEN</code> or <code>VENDOR_TOKEN</code>) before this is reachable from the internet.</div>{% endif %}
+  {% if msg %}<div class="flash ok" role="status">{{ msg }}</div>{% endif %}
+  {% if err %}<div class="flash err" role="alert">{{ err }}</div>{% endif %}
+  {% block body %}{% endblock %}
+</main>
+{% set foot = footer_for(footer_kind|default("internal"), request) %}
+<footer class="site-footer">
+  <div class="frame">
+    <div class="cols three">
+      {% for title, links in foot.groups %}<div><p class="eyebrow">{{ title }}</p>{% for label, href in links %}<a href="{{ href }}">{{ label }}</a>{% endfor %}</div>{% endfor %}
+      <div><p class="eyebrow">Company</p>{% for line in foot.lines[:2] %}<p class="legal">{{ line }}</p>{% endfor %}</div>
+    </div>
+    {% for line in foot.lines[2:] %}<p class="legal">{{ line }}</p>{% endfor %}
+  </div>
+</footer>
+</body>
+</html>

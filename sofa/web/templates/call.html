@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Call · SOFA admin{% endblock %}
+{% block body %}
+<p><a href="/admin/calls">&larr; calls</a></p>
+<h1>Call {{ c.id|short }} {% if c.is_test %}<span class="pill">test</span>{% endif %}</h1>
+<div class="card small">
+  {{ merchant.name if merchant else "SOFA gateway" }} · caller {{ c.from_number }}{% if customer and customer.name %} ({{ customer.name }}){% endif %} · language {{ c.language or "?" }}
+  · started {{ c.started_at|lagos }} · {{ c.duration_s or "?" }} s · outcome <b>{{ c.outcome or "in progress" }}</b>
+  {% if handoff %}· <span class="pill warn">handoff: {{ handoff.reason|replace("_", " ") }}</span> {{ handoff.summary }}{% endif %}
+</div>
+
+{% for t in c.turns %}
+<div class="card">
+  <div class="small muted">Turn {{ t.seq }} · {{ t.latency_ms.total if t.latency_ms else "?" }} ms
+    {% if t.latency_ms %}(asr {{ t.latency_ms.get("asr", "-") }}, model {{ t.latency_ms.get("understand_and_act", "-") }}, tts {{ t.latency_ms.get("tts", "-") }}){% endif %}
+    · {% if t.labelled_at %}<span class="pill ok">labelled</span>{% else %}<a href="/admin/label?turn={{ t.id }}">label this turn</a>{% endif %}</div>
+  <div class="row" style="margin-top:6px">
+    <div><b>Caller</b> {% if t.audio_path %}<br><audio controls preload="none" src="/admin/audio/{{ t.id }}/caller"></audio>{% endif %}
+      <div>{{ t.transcript or "(silence)" }}</div>
+      <div class="muted small">{{ t.asr_model or "" }}{% if t.asr_confidence is not none %} · confidence {{ "%.2f"|format(t.asr_confidence) }}{% endif %}</div>
+      {% if t.asr_alternatives %}<div class="muted small">Also heard: {% for a in t.asr_alternatives %}<b>{{ a.language }}</b> &ldquo;{{ a.text }}&rdquo; ({{ "%.2f"|format(a.confidence) }}){% if not loop.last %}; {% endif %}{% endfor %}</div>{% endif %}</div>
+    <div><b>Sofa</b> {% if t.reply_audio_path %}<br><audio controls preload="none" src="/admin/audio/{{ t.id }}/reply"></audio>{% endif %}
+      <div>{{ t.reply_text or "" }}</div><div class="muted small">action: {{ (t.action_taken or "")|replace("|", " · ") }}</div></div>
+  </div>
+  {% if t.llm_json %}<details><summary class="small">Understood as: <b>{{ t.llm_json.get("intent", "?") }}</b></summary><pre>{{ t.llm_json|tojson(indent=2) }}</pre>
+    {% if t.match_candidates %}<pre>{{ t.match_candidates|tojson(indent=2) }}</pre>{% endif %}</details>{% endif %}
+  {% if t.error %}<div class="flash err">{{ t.error }}</div>{% endif %}
+</div>
+{% else %}<p class="muted">No turns recorded.</p>{% endfor %}
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Log in · SOFA admin{% endblock %}
+{% block body %}
+<div class="login">
+  <p class="eyebrow">SOFA admin</p>
+  <h1>Log in</h1>
+  <p class="lede">The Connected Intelligence team console.</p>
+  <form method="post" action="/admin/login" class="card" style="margin-top:var(--space-6)">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label for="pw">Admin password <span class="caption">required</span></label>
+    <input id="pw" type="password" name="password" autocomplete="current-password" autofocus required>
+    <div class="actions" style="margin-top:var(--space-4)"><button>Log in</button></div>
+  </form>
+</div>
+{% endblock %}

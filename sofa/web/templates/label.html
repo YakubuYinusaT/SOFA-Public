@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Label · SOFA admin{% endblock %}
+{% block body %}
+<h1>Label turns</h1>
+<div class="card">
+  <div class="small muted">{{ done }} of {{ total }} turns labelled</div>
+  <div class="bar2" style="margin:6px 0 10px"><i style="width:{{ (100 * done / total) if total else 0 }}%"></i></div>
+  <form method="get" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end">
+    <div><label>Language spoken</label><select name="lang"><option value="">any</option>{% for l in langs %}<option {{ 'selected' if l == lang }}>{{ l }}</option>{% endfor %}</select></div>
+    <label class="inline"><input type="checkbox" name="tests" value="1" {{ 'checked' if tests }}> include team test calls</label>
+    <button class="ghost small">Apply</button>
+  </form>
+</div>
+
+{% if not t %}
+<div class="card"><b>Nothing left to label.</b> <span class="muted">Every turn that has a transcript is labelled{% if lang or not tests %} (with these filters){% endif %}.</span></div>
+{% else %}
+<form class="card" method="post" action="/admin/label/{{ t.id }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="filter_lang" value="{{ lang }}"><input type="hidden" name="filter_tests" value="{{ tests }}">
+  <div class="small muted">Call {{ call.id|short }} · turn {{ t.seq }} · {{ call.started_at|lagos }}{% if call.is_test %} · test call{% endif %}
+    · <a href="/admin/calls/{{ call.id }}">whole call</a></div>
+  {% if t.audio_path %}<p><audio controls autoplay src="/admin/audio/{{ t.id }}/caller"></audio></p>{% else %}<p class="muted">No audio stored for this turn.</p>{% endif %}
+
+  <label>What the caller actually said (correct the machine's transcript). Machine heard it with confidence {{ "%.2f"|format(t.asr_confidence) if t.asr_confidence is not none else "?" }}.</label>
+  {% if t.asr_alternatives %}<p class="small muted">The other speech model heard: {% for a in t.asr_alternatives %}<b>{{ a.language }}</b> &ldquo;{{ a.text }}&rdquo; ({{ "%.2f"|format(a.confidence) }}){% if not loop.last %}; {% endif %}{% endfor %}. If they are mixing languages, tick &ldquo;code-switching&rdquo; below.</p>{% endif %}
+  <textarea name="transcript" required>{{ label.get("transcript") or t.transcript }}</textarea>
+  <div class="row">
+    <div><label>Language actually spoken</label><select name="language">{% for l in langs %}<option value="{{ l }}" {{ 'selected' if l == (label.get("language") or call.language) }}>{{ l }}</option>{% endfor %}</select></div>
+    <div><label>What the caller wanted (system chose: <b>{{ intent or "?" }}</b>)</label>
+      <select name="intent">{% for i in intents %}<option {{ 'selected' if i == (label.get("intent") or intent) }}>{{ i }}</option>{% endfor %}</select></div>
+  </div>
+
+  {% if matches %}<h3>Products the system picked</h3>
+  <input type="hidden" name="n_matches" value="{{ matches|length }}">
+  {% for m in matches %}
+    <div class="row" style="align-items:end">
+      <div><label>Caller said</label><input type="text" name="spoken_{{ loop.index0 }}" value="{{ m.spoken }}" readonly>
+        <input type="hidden" name="system_{{ loop.index0 }}" value="{{ m.chosen or '' }}"></div>
+      <div><label>System chose: {{ m.chosen or "nothing" }} ({{ m.status }})</label>
+        <select name="correct_{{ loop.index0 }}"><option value="">not something this shop sells</option>
+          {% for n in product_names %}<option {{ 'selected' if n == m.chosen }}>{{ n }}</option>{% endfor %}</select></div>
+    </div>
+  {% endfor %}
+  <p class="muted small">If you pick a different product, the caller's words are taught to the system as an alias for it (it outranks aliases learned from callers).</p>{% endif %}
+
+  <h3>What made this hard to hear?</h3>
+  <p>{% for f in flags %}<label class="inline"><input type="checkbox" name="flags" value="{{ f }}" {{ 'checked' if f in label.get("flags", []) }}> {{ f }}</label>{% endfor %}</p>
+  <label>Notes</label><input type="text" name="notes" value="{{ label.get('notes', '') }}">
+  <p style="margin-top:12px"><button>Save and next</button></p>
+</form>
+{% endif %}
+{% endblock %}

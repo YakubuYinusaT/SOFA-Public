@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_ui.html" import chip, rule, empty %}
+{% block title %}Follow-ups · {{ brand }}{% endblock %}
+{% block body %}
+<header class="page-head">
+  <p class="eyebrow">{{ bank.name }} · follow-ups</p>
+  <h1>Callers to phone back</h1>
+  <p class="lede">Each of these callers was told the bank will follow up. Phone the number shown, then record what happened.</p>
+</header>
+<div class="actions" style="margin-bottom:var(--space-5)">
+  <a class="btn {{ '' if status == 'open' else 'ghost' }}" href="/provider/handoffs?status=open" {% if status == "open" %}aria-current="page"{% endif %}>Waiting</a>
+  <a class="btn {{ '' if status == 'resolved' else 'ghost' }}" href="/provider/handoffs?status=resolved" {% if status == "resolved" %}aria-current="page"{% endif %}>Resolved</a>
+</div>
+
+{% for h in rows %}
+<section class="card" aria-label="Follow-up for {{ caller_of(h) or 'an unknown number' }}">
+  <div style="display:flex;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;align-items:baseline">
+    <div><p class="eyebrow">{{ reasons.get(h.reason, h.reason|replace("_", " ")) }} · opened {{ h.created_at|lagos }}</p><h3>Phone <span class="data">{{ caller_of(h) or "unknown number" }}</span></h3></div>
+    {{ chip(h.status) }}
+  </div>
+  <p style="white-space:pre-line;max-width:none">{{ h.summary }}</p>
+  {% if h.resolved_by %}<p class="caption">Resolved by {{ h.resolved_by }}</p>{% endif %}
+  <form method="post" action="/provider/handoffs/{{ h.id }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+    {% if h.status != "resolved" %}
+    <div class="row">
+      <div><label for="n-{{ h.id }}">Note <span class="caption">for example: rang, no answer</span></label><input id="n-{{ h.id }}" type="text" name="note"></div>
+      <div><label for="b-{{ h.id }}">Your name</label><input id="b-{{ h.id }}" type="text" name="by"></div>
+    </div>
+    <div class="actions" style="margin-top:var(--space-4)"><button class="ghost" name="action" value="contacted">Mark as contacted</button><button name="action" value="resolved">Mark as resolved</button></div>
+    {% else %}<button class="ghost" name="action" value="reopen">Reopen follow-up</button>{% endif %}
+  </form>
+</section>
+{% else %}
+{% if status == "open" %}
+{{ empty("No callers waiting.", "A caller appears here when Sofa cannot finish their request and tells them the bank will follow up.") }}
+{% else %}
+{{ empty("Nothing resolved yet.", "Follow-ups you mark as resolved move here.") }}
+{% endif %}
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Log in · {{ brand|default("SOFA") }}{% endblock %}
+{% block body %}
+<div class="login">
+  <p class="eyebrow">{{ brand|default("SOFA") }}</p>
+  <h1>Log in</h1>
+  <p class="lede">This is the console for {{ who }}.</p>
+  <form method="post" action="{{ base_path }}/login" class="card" style="margin-top:var(--space-6)">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label for="pw">Password <span class="caption">required</span></label>
+    <input id="pw" type="password" name="password" autocomplete="current-password" autofocus required>
+    <div class="actions" style="margin-top:var(--space-4)"><button>Log in</button></div>
+  </form>
+  <p class="note">This is a demo. In production each person would have their own account.</p>
+</div>
+{% endblock %}

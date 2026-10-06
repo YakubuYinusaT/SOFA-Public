@@ -1,0 +1,15 @@
+{# Connected Intelligence components for the consoles. Import with: {% from "_ui.html" import chip, metric, rule, empty %} #}
+
+{# StateChip: a colour and always its name, in the canonical machine vocabulary. One chip per object. #}
+{% macro chip(state, label=None) -%}<span class="chip {{ state|state_class }}">{{ (label or state)|replace(" ", "_")|upper }}</span>{%- endmacro %}
+
+{# MetricPair: what it measures, the number, and when it was true. A measured figure carries its as-of time; exposure is the only thing red marks. #}
+{% macro metric(label, value, qualifier="", exposed=False) -%}
+<div class="metric"><span class="label">{{ label }}</span><span class="figure{{ ' exposed' if exposed }}">{{ value }}</span>{% if qualifier %}<span class="qualifier">{{ qualifier }}</span>{% endif %}</div>
+{%- endmacro %}
+
+{# The numbered label that sits above a hairline and opens a section. #}
+{% macro rule(number, title) -%}<h2 class="section-rule"><b>{{ "%02d"|format(number) }}</b> {{ title }}</h2>{%- endmacro %}
+
+{# An empty state says what will appear here and what causes it to appear. #}
+{% macro empty(title, text) -%}<div class="empty-state"><b>{{ title }}</b>{{ text }}</div>{%- endmacro %}

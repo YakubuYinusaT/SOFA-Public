@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_ui.html" import chip, metric, rule, empty %}
+{% block title %}Today · {{ brand }}{% endblock %}
+{% block body %}
+<header class="page-head">
+  <p class="eyebrow">{{ m.name }} · today</p>
+  <h1>What needs you today</h1>
+  <p class="lede">Orders waiting on you, sales in the last 24 hours, and what is running low.</p>
+</header>
+
+{{ rule(1, "The last 24 hours") }}
+<div class="cols four">
+  {{ metric("New orders", new_today, "placed by phone, " ~ as_of()) }}
+  {{ metric("Sales", sales|naira, "orders paid or on their way, " ~ as_of()) }}
+  {{ metric("Calls", calls, "answered by Sofa for this shop, " ~ as_of()) }}
+  {{ metric("Questions waiting", questions, "callers Sofa could not answer, " ~ as_of(), exposed=(questions > 0)) }}
+</div>
+{% if questions %}<p><a class="btn ghost" href="/vendor/questions">Answer {{ questions }} waiting question{{ "s" if questions != 1 }}</a></p>{% endif %}
+
+{{ rule(2, "Orders to deal with") }}
+{% if orders_open %}
+<div class="tablewrap"><table class="responsive">
+  <caption>Orders that are confirmed, awaiting payment, paid or dispatched, newest first</caption>
+  <thead><tr><th scope="col">Placed</th><th scope="col">Customer</th><th scope="col">What they ordered</th><th scope="col" class="right">Total</th><th scope="col">State</th></tr></thead>
+  <tbody>
+  {% for o in orders_open %}{% set c = customer(o) %}<tr>
+    <td data-label="Placed" class="data-s">{{ o.created_at|lagos }}</td>
+    <td data-label="Customer"><b>{{ c.name or "No name given" }}</b><br><span class="data-s">{{ c.phone }}</span></td>
+    <td data-label="What they ordered">{{ items(o) }}<br><span class="caption">{{ o.delivery_address or "No delivery address yet" }}</span></td>
+    <td data-label="Total" class="right data">{{ o.total_kobo|naira }}</td>
+    <td data-label="State">{{ chip(o.status) }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<p><a class="btn ghost" href="/vendor/orders">Open all orders</a></p>
+{% else %}
+{{ empty("No orders waiting.", "When a customer orders by phone, the order appears here until you dispatch it.") }}
+{% endif %}
+
+{{ rule(3, "Running low") }}
+{% if low %}
+<div class="tablewrap"><table class="responsive">
+  <caption>Active products with {{ 20 }} or fewer in stock, lowest first</caption>
+  <thead><tr><th scope="col">Product</th><th scope="col" class="right">In stock</th><th scope="col">State</th></tr></thead>
+  <tbody>
+  {% for p in low %}<tr><td data-label="Product"><b>{{ p.name }}</b></td><td data-label="In stock" class="right data">{{ p.stock_qty }} {{ p.default_unit }}</td>
+    <td data-label="State">{{ chip("out" if p.stock_qty <= 0 else "low") }}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+{{ empty("Everything is well stocked.", "A product appears here when its stock falls to 20 or below.") }}
+{% endif %}
+<p><a class="btn" href="/vendor/stock">Update stock and prices</a></p>
+{% endblock %}

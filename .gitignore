@@ -1,0 +1,12 @@
+.env
+data/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# real call recordings and test results stay off GitHub
+recordings/
+asr_gate_*.json
+gpu_smoke_out/
+deliverables/

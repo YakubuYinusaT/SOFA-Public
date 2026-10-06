@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Order {{ o.id|short }} · SOFA admin{% endblock %}
+{% block body %}
+<p><a href="/admin/orders">&larr; orders</a></p>
+<h1>Order {{ o.id|short }} <span class="pill warn">{{ o.status|replace("_", " ") }}</span></h1>
+
+<div class="row">
+  <div class="card"><h3>Customer</h3>
+    {{ customer.name or "(name not given)" }}<br>{{ customer.phone }}<br>
+    <span class="muted small">Deliver to:</span> {{ o.delivery_address or "(none)" }}<br>
+    <span class="muted small">Merchant:</span> {{ merchant.name }} · <span class="muted small">payment:</span> {{ o.payment_mode|replace("_", " ") }}
+    {% if o.source_call_id %}<br><a href="/admin/calls/{{ o.source_call_id }}">the call that made this order</a>{% endif %}</div>
+  <div class="card"><h3>Move the order on</h3>
+    {% for s in next_states %}
+      <form class="inline" method="post" action="/admin/orders/{{ o.id }}/status"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="status" value="{{ s }}">
+        <button class="{{ 'danger' if s == 'cancelled' else '' }}" {% if s == 'cancelled' %}onclick="return confirm('Cancel this order? Reserved stock is released and any open invoice is voided.')"{% endif %}>{{ {"dispatched":"Mark dispatched","delivered":"Mark delivered","cancelled":"Cancel order","paid":"Mark paid (pay on delivery)","confirmed":"Confirm","awaiting_payment":"Await payment"}.get(s, s) }}</button></form>
+    {% else %}<span class="muted">No further steps.</span>{% endfor %}
+    <p class="muted small">Dispatch and delivery text the customer and queue the callback from the merchant's number.</p></div>
+</div>
+
+<h2>Items</h2>
+<div class="tablewrap"><table>
+  <tr><th>Product</th><th>Quantity</th><th class="right">Unit price</th><th class="right">Line</th><th>Customer said</th></tr>
+  {% for i in o.items %}<tr><td>{{ i.product.name }}</td><td>{{ i.qty }} {{ i.unit }}</td><td class="right">{{ i.unit_price_kobo|naira }}</td>
+    <td class="right">{{ (i.qty * i.unit_price_kobo)|naira }}</td><td class="muted">{{ i.spoken_name or "" }}</td></tr>{% endfor %}
+  <tr><th colspan="3" class="right">Total</th><th class="right">{{ o.total_kobo|naira }}</th><th></th></tr>
+</table></div>
+
+{% if calls_out %}<h2>Status calls to the customer</h2>
+<div class="tablewrap"><table>
+  <tr><th>About</th><th>State</th><th>Tries</th><th>Note</th></tr>
+  {% for c in calls_out %}<tr><td>{{ c.trigger|replace("_", " ") }}</td>
+    <td><span class="pill {{ 'ok' if c.status == 'answered' else 'warn' }}">{{ c.status|replace("_", " ") }}</span></td>
+    <td>{{ c.attempt }}</td><td class="muted small">{{ c.last_error or "" }}{% if c.call_id %} <a href="/admin/calls/{{ c.call_id }}">the call</a>{% endif %}</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+
+{% if invoices %}<h2>Invoice and payments</h2>
+<div class="card">
+  {% for inv in invoices %}<div><b>{{ inv.reference }}</b> {{ inv.amount_kobo|naira }} <span class="pill {{ 'ok' if inv.status == 'paid' else 'warn' }}">{{ inv.status }}</span>
+    <span class="muted small">sent by {{ inv.sent_via|join(", ") or "not sent" }}</span></div>{% endfor %}
+  {% if payments %}<ul class="plain">{% for p in payments %}<li>{{ p.amount_kobo|naira }} by {{ p.sender_name or "unknown" }} ({{ p.channel }}, {{ p.match_status }}) · {{ p.created_at|lagos }}</li>{% endfor %}</ul>{% endif %}
+  {% if open_invoice %}
+  <form method="post" action="/admin/invoices/{{ open_invoice.id }}/payments"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <h3>Record a payment by hand</h3>
+    <p class="muted small">Balance due: {{ (open_invoice.amount_kobo - paid_so_far)|naira }}. Use this only after you can SEE the money in the bank or Paystack dashboard, never from a screenshot.</p>
+    <div class="row"><div><label>Amount received (naira)</label><input type="number" step="0.01" min="0" name="amount_naira" required></div>
+      <div><label>Sender name</label><input type="text" name="sender_name"></div></div>
+    <p><label class="inline"><input type="checkbox" name="confirmed"> I have seen these funds in the bank or Paystack dashboard</label></p>
+    <button>Record payment</button></form>{% endif %}
+</div>{% endif %}
+
+<h2>History</h2>
+<ul class="plain">{% for e in events %}<li>{{ e.created_at|lagos }}: {{ e.from_status or "new" }} &rarr; {{ e.to_status }} <span class="muted small">by {{ e.actor }}</span></li>{% endfor %}</ul>
+{% endblock %}

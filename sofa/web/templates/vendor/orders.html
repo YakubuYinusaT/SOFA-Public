@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_ui.html" import chip, rule, empty %}
+{% block title %}Orders · {{ brand }}{% endblock %}
+{% block body %}
+<header class="page-head">
+  <p class="eyebrow">{{ m.name }} · orders</p>
+  <h1>Orders</h1>
+  <p class="lede">Move an order on and the customer is told by text message. Payments are applied automatically when the customer transfers to their payment account.</p>
+</header>
+
+<form method="get" class="card" aria-label="Filter orders">
+  <div class="row" style="align-items:end">
+    <div><label for="status">State</label>
+      <select id="status" name="status"><option value="">All except drafts</option>{% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s == status }}>{{ s|upper }}</option>{% endfor %}</select></div>
+    <div><button>Filter orders</button></div>
+  </div>
+</form>
+
+{% set moves = {"confirmed": [("dispatched", "Mark dispatched"), ("cancelled", "Cancel order")], "awaiting_payment": [("cancelled", "Cancel order")],
+                "paid": [("dispatched", "Mark dispatched")], "dispatched": [("delivered", "Mark delivered")]} %}
+{% if rows %}
+<div class="tablewrap"><table class="responsive">
+  <caption>{{ rows|length }} order{{ "s" if rows|length != 1 }}, newest first, {{ as_of() }}</caption>
+  <thead><tr><th scope="col">Placed</th><th scope="col">Customer</th><th scope="col">Items</th><th scope="col" class="right">Total</th><th scope="col">State</th><th scope="col">Next step</th></tr></thead>
+  <tbody>
+  {% for r in rows %}<tr>
+    <td data-label="Placed" class="data-s">{{ r.o.created_at|lagos }}<br>{{ r.o.id|short }}</td>
+    <td data-label="Customer"><b>{{ r.customer.name or "No name given" }}</b><br><span class="data-s">{{ r.customer.phone }}</span></td>
+    <td data-label="Items">{{ r.lines }}<br><span class="caption">{{ r.o.delivery_address or "No delivery address yet" }}</span></td>
+    <td data-label="Total" class="right data">{{ r.o.total_kobo|naira }}</td>
+    <td data-label="State">{{ chip(r.o.status) }}</td>
+    <td data-label="Next step"><div class="actions">{% for to, label in moves.get(r.o.status, []) %}
+      <form method="post" action="/vendor/orders/{{ r.o.id }}/status" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="status" value="{{ to }}">
+        <button class="small {{ 'danger' if to == 'cancelled' else '' }}">{{ label }}</button></form>{% else %}<span class="caption">No further step</span>{% endfor %}</div></td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+{{ empty("No orders match.", "Orders appear here when a customer orders by phone and confirms the read-back. Change the state filter to see other orders.") }}
+{% endif %}
+{% endblock %}

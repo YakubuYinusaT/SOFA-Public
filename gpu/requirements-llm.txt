@@ -1,0 +1,3 @@
+# venv for vLLM only. It pins its own torch; do not install the others here.
+# Pin the exact version you tested on the host (pip freeze) before the pilot.
+vllm>=0.12

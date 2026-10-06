@@ -1,0 +1,29 @@
+# Local stack: API + Postgres 15 + Redis + mock GPU host.
+# Point ASR_URL / LLM_URL / TTS_URL at the real GPU host to leave the mocks behind.
+services:
+  db:
+    image: postgres:15
+    environment: {POSTGRES_USER: sofa, POSTGRES_PASSWORD: sofa, POSTGRES_DB: sofa}
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+  mock-gpu:
+    build: .
+    command: uvicorn mocks.gpu_mock:app --host 0.0.0.0 --port 9000
+    ports: ["9000:9000"]
+  api:
+    build: .
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql+psycopg://sofa:sofa@db:5432/sofa
+      REDIS_URL: redis://redis:6379/0
+      ASR_URL: http://mock-gpu:9000
+      LLM_URL: http://mock-gpu:9000
+      TTS_URL: http://mock-gpu:9000
+    volumes: ["./data:/app/data"]
+    ports: ["8000:8000"]
+    depends_on: [db, redis, mock-gpu]
+volumes:
+  pgdata:

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "_ui.html" import chip, metric, rule, empty %}
+{% block title %}SOFA live demo{% endblock %}
+{% block head %}<meta http-equiv="refresh" content="{{ refresh }}">{% endblock %}
+
+{% block hero %}
+<section class="hero" aria-labelledby="demo-title">
+  <div class="frame">
+    <p class="eyebrow">SOFA by Connected Intelligence</p>
+    <h1 id="demo-title">Everyday services, by voice, on any phone.</h1>
+    <p class="lede">No smartphone and no data. {{ lede }} This page updates by itself every {{ refresh }} seconds.</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block body %}
+<div class="flash" role="note"><b>This page shows what callers said.</b> Phone numbers are masked to the last four digits and long numbers are hidden.</div>
+
+{{ rule(1, "The last 24 hours") }}
+<div class="cols three">
+  {% for label, n in stats %}{{ metric(label|capitalize, n, "since the demo started, " ~ as_of()) }}{% endfor %}
+</div>
+
+{{ rule(2, "Who sees what") }}
+<div class="cols {{ 'two' if side != 'all' else 'three' }}">
+  <section class="card"><p class="eyebrow">The caller</p><h3>A normal phone call</h3><p class="small">The caller just talks.{% if side != "naic" %} Sofa reads back anything that moves money, and the caller confirms with a PIN typed on the keypad.{% endif %}</p></section>
+  {% if side in ("demobank", "all") %}<section class="card"><p class="eyebrow">The bank</p><h3>Service desk</h3><p class="small">Follow-ups and account applications land with the bank. It approves or rejects, and the caller is told by text message.</p><a class="btn ghost" href="/provider">Open the bank desk</a></section>{% endif %}
+  {% if side in ("naic", "all") %}<section class="card"><p class="eyebrow">The shop owner</p><h3>CII Store portal</h3><p class="small">{{ products }} products and {{ advice }} pieces of written advice. Orders, stock, prices and customer questions, run by the owner.</p><a class="btn ghost" href="/vendor">Open the shop portal</a></section>{% endif %}
+</div>
+{% if show_logins %}<p class="caption">Demo passwords. {% for name, path, pw in logins %}{{ name }}: <code>{{ pw }}</code>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+
+{{ rule(3, "This build") }}
+<div class="cols four">
+  {{ metric("Services on", services|join(", "), "switch with SERVICES_ENABLED") }}
+  {% if side == "demobank" and llm_provider == "vllm" %}{{ metric("Language model", "ours", "run on our own servers") }}{% else %}{{ metric("Language model", llm_provider, llm_model) }}{% endif %}
+  {% if side != "naic" %}{{ metric("Bank", bank_backend, "the built-in bank") }}{% endif %}
+  {{ metric("Number to call", gateway_number, "the front desk") }}
+</div>
+
+{{ rule(4, "Try it") }}
+<div class="tablewrap"><table class="responsive">
+  <caption>Five things to try.</caption>
+  <thead><tr><th scope="col">Scenario</th><th scope="col">What to do</th></tr></thead>
+  <tbody>{% for title, how in try_these %}<tr><th scope="row" style="background:transparent;color:var(--text-primary);letter-spacing:0;text-transform:none;font-size:14px;white-space:normal">{{ title }}</th><td data-label="Scenario">{{ how }}</td></tr>{% endfor %}</tbody>
+</table></div>
+
+{{ rule(5, "Latest calls") }}
+{% for c in calls %}
+<section class="card" aria-label="Call from {{ c.from }}">
+  <div style="display:flex;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;align-items:baseline">
+    <h3><span class="data">{{ c.from }}</span></h3>
+    <span class="caption">{{ c.when|lagos }} · {{ c.domain }}{% if c.language %} · {{ c.language }}{% endif %}{% if c.outcome %} · {{ c.outcome }}{% endif %}</span>
+  </div>
+  <div class="tablewrap" style="margin:var(--space-3) 0 0"><table class="responsive">
+    <caption>What the caller said and how Sofa replied</caption>
+    <thead><tr><th scope="col">Caller said</th><th scope="col">Sofa did</th><th scope="col">Sofa said</th><th scope="col" class="right">Time</th></tr></thead>
+    <tbody>
+    {% for t in c.turns %}<tr><td data-label="Caller said">{{ t.said or "(silence)" }}</td><td data-label="Sofa did" class="data-s">{{ t.action or "-" }}</td><td data-label="Sofa said">{{ t.reply }}</td><td data-label="Time" class="right data-s">{% if t.ms %}{{ t.ms }} ms{% endif %}</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% else %}
+{{ empty("No calls yet.", "Call the number above, or use the scenarios in section 04, and the call appears here as it happens.") }}
+{% endfor %}
+{% endblock %}

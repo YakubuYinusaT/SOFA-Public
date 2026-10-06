@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "_ui.html" import chip, rule, empty %}
+{% block title %}Stock and prices · {{ brand }}{% endblock %}
+{% block body %}
+<header class="page-head">
+  <p class="eyebrow">{{ m.name }} · stock and prices</p>
+  <h1>Stock and prices</h1>
+  <p class="lede">What callers can buy. Change a price or a stock figure and Sofa uses it on the very next call.</p>
+</header>
+
+{{ rule(1, "Products") }}
+{% if items %}
+<div class="tablewrap"><table class="responsive">
+  <caption>{{ items|length }} products. Stock at or below {{ low }} is marked LOW; zero is OUT. {{ as_of()|capitalize }}.</caption>
+  <thead><tr><th scope="col">Product</th><th scope="col">Price (naira)</th><th scope="col">In stock</th><th scope="col">State</th><th scope="col">For sale</th><th scope="col"><span class="caption">Save</span></th></tr></thead>
+  <tbody>
+  {% for p in items %}<tr>
+    <td data-label="Product"><b>{{ p.name }}</b><br><span class="caption">per {{ p.default_unit }} · {{ p.category or "no category" }}</span></td>
+    <td data-label="Price (naira)"><input form="f-{{ p.id }}" type="number" name="price_naira" value="{{ (p.price_kobo / 100)|int }}" min="1" style="width:120px" aria-label="Price in naira for {{ p.name }}"></td>
+    <td data-label="In stock"><input form="f-{{ p.id }}" type="number" name="stock_qty" value="{{ p.stock_qty }}" min="0" style="width:100px" aria-label="Stock for {{ p.name }}"></td>
+    <td data-label="State">{% if not p.active %}{{ chip("not for sale") }}{% elif p.stock_qty <= 0 %}{{ chip("out") }}{% elif p.stock_qty <= low %}{{ chip("low") }}{% else %}{{ chip("in stock") }}{% endif %}</td>
+    <td data-label="For sale"><label class="inline"><input form="f-{{ p.id }}" type="checkbox" name="active" {{ 'checked' if p.active }}> yes</label></td>
+    <td><form id="f-{{ p.id }}" method="post" action="/vendor/stock/{{ p.id }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="small" aria-label="Save changes to {{ p.name }}">Save</button></form></td>
+  </tr>{% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+{{ empty("No products yet.", "Add your first product below. Callers can ask for it by name as soon as it is saved.") }}
+{% endif %}
+
+{{ rule(2, "Add a product") }}
+<form method="post" action="/vendor/stock" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="row">
+    <div><label for="n-name">Name <span class="caption">required</span></label><input id="n-name" type="text" name="name" value="{{ draft.get('name', '') }}" required placeholder="for example NPK 20-10-10 Fertilizer"></div>
+    <div><label for="n-unit">Sold by <span class="caption">required: bag, bottle, piece, kg</span></label><input id="n-unit" type="text" name="unit" value="{{ draft.get('unit', '') }}" required></div>
+    <div><label for="n-price">Price in naira <span class="caption">required</span></label><input id="n-price" type="number" name="price_naira" min="1" required value="{{ draft.get('price_naira', '') }}"></div>
+    <div><label for="n-stock">Stock</label><input id="n-stock" type="number" name="stock_qty" min="0" value="{{ draft.get('stock_qty', 0) }}"></div>
+    <div><label for="n-cat">Category</label><input id="n-cat" type="text" name="category" value="{{ draft.get('category', '') }}" placeholder="fertilizer, seed, agrochemical, tools"></div>
+  </div>
+  <label for="n-alias">What callers might call it <span class="caption">separate with commas</span></label>
+  <input id="n-alias" type="text" name="aliases" value="{{ draft.get('aliases', '') }}" placeholder="npk, compound fertilizer">
+  <p class="field-help">Sofa matches what a caller says against the name and these words, so add the names farmers actually use.</p>
+  <div class="actions" style="margin-top:var(--space-4)"><button>Add product</button></div>
+</form>
+{% endblock %}

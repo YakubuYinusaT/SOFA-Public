@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Catalog · {{ m.name }}{% endblock %}
+{% block body %}
+<h1>{{ m.name }} catalog</h1>
+<p><a href="/admin/merchants/{{ m.id }}">&larr; merchant settings</a></p>
+
+<div class="tablewrap"><table>
+  <tr><th>Product</th><th>Price per unit</th><th>Stock</th><th>Active</th><th>Save</th><th>How customers ask for it (aliases)</th></tr>
+  {% for p in items %}
+  <tr>
+    <td><b>{{ p.name }}</b><br><span class="muted small">{{ p.category or "" }} {{ p.size_label or "" }}</span>
+      <form id="f-{{ p.id }}" method="post" action="/admin/merchants/{{ m.id }}/products/{{ p.id }}"><input type="hidden" name="csrf" value="{{ csrf }}"></form></td>
+    <td style="min-width:170px">
+      <select name="unit" form="f-{{ p.id }}" style="width:auto">{% for u, price, per in unit_options(p) %}<option value="{{ u }}" {{ 'selected' if u == p.default_unit }}>{{ u }} ({{ (price / 100)|round(2) }})</option>{% endfor %}</select>
+      <input type="number" name="price_naira" form="f-{{ p.id }}" step="0.01" min="0" placeholder="new price" style="width:110px"> <span class="small muted">naira</span>
+      <div class="muted small">To change a price: pick the unit, type the new price. Leave empty to keep prices as they are.</div></td>
+    <td><input type="number" name="stock_qty" form="f-{{ p.id }}" min="0" value="{{ p.stock_qty }}" style="width:90px"><div class="muted small">{{ p.default_unit }}s</div></td>
+    <td><input type="checkbox" name="active" form="f-{{ p.id }}" {{ 'checked' if p.active }}></td>
+    <td><button class="small" form="f-{{ p.id }}">Save</button></td>
+    <td style="min-width:230px">
+      {% for a in p.aliases %}<span class="pill {{ 'ok' if a.source == 'merchant_correction' else '' }}" title="{{ a.source }}, confirmed {{ a.confirmations }}x">{{ a.phrase }}</span> {% endfor %}
+      <form method="post" action="/admin/merchants/{{ m.id }}/products/{{ p.id }}/aliases" style="margin-top:5px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="text" name="phrase" placeholder="add a phrase" style="width:70%"> <button class="small ghost">Add</button></form></td>
+  </tr>
+  {% else %}<tr><td colspan="6" class="muted">No products yet. Import a CSV or add one below.</td></tr>{% endfor %}
+</table></div>
+<p class="muted small"><b>Aliases:</b> add every way customers ask for an item: English, Yoruba, Pidgin, and mixed phrases. Callers mix languages in one sentence, and a shop's own words are the best matches. </p>
+<p class="muted small">Every stock change is recorded as a stock movement. Changing a price here also confirms large price changes that the owner could not make by voice.</p>
+
+<div class="row" style="margin-top:14px">
+<form class="card" method="post" action="/admin/merchants/{{ m.id }}/products/import" enctype="multipart/form-data">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><h3>Import a CSV</h3>
+  <input type="file" name="file" accept=".csv" required>
+  <p class="muted small">Columns: name, brand, size_label, category, unit, price_naira, stock_qty, aliases (separate with |), units (for example <code>carton:40:7000</code>). A bad row rejects the whole file and names the row. <a href="/admin/sample.csv">Download a sample</a>.</p>
+  <button>Import</button>
+</form>
+
+<form class="card" method="post" action="/admin/merchants/{{ m.id }}/products"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <h3>Add one product</h3>
+  <div class="row">
+    <div><label>Name</label><input type="text" name="name" required></div>
+    <div><label>Brand</label><input type="text" name="brand"></div>
+    <div><label>Size</label><input type="text" name="size_label" placeholder="120g"></div>
+    <div><label>Category</label><input type="text" name="category"></div>
+    <div><label>Selling unit</label><input type="text" name="unit" placeholder="pack, tin, carton..." required></div>
+    <div><label>Price (naira)</label><input type="number" step="0.01" min="0" name="price_naira" required></div>
+    <div><label>Stock</label><input type="number" min="0" name="stock_qty" value="0"></div>
+  </div>
+  <label>Aliases: how customers ask for it (separate with |)</label><input type="text" name="aliases" placeholder="indomie big|big indomie">
+  <label>Other units (unit:how many selling units:price)</label><input type="text" name="units" placeholder="carton:40:7000">
+  <p><button>Add product</button></p>
+</form>
+</div>
+{% endblock %}

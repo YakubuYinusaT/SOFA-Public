@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_ui.html" import chip, rule, empty %}
+{% block title %}Customer questions · {{ brand }}{% endblock %}
+{% block body %}
+<header class="page-head">
+  <p class="eyebrow">{{ m.name }} · customer questions</p>
+  <h1>Questions Sofa could not answer</h1>
+  <p class="lede">Sofa told these callers your team will follow up. Phone them, and write the answer up as advice so Sofa gives it to the next caller.</p>
+</header>
+<div class="actions" style="margin-bottom:var(--space-5)">
+  <a class="btn {{ '' if status == 'open' else 'ghost' }}" href="/vendor/questions?status=open" {% if status == "open" %}aria-current="page"{% endif %}>Waiting</a>
+  <a class="btn {{ '' if status == 'resolved' else 'ghost' }}" href="/vendor/questions?status=resolved" {% if status == "resolved" %}aria-current="page"{% endif %}>Handled</a>
+</div>
+
+{% for r in rows %}{% set h = r.h %}{% set d = drafts.get(h.id|string, {}) %}
+<section class="card" aria-label="Question from {{ r.phone or 'an unknown number' }}">
+  <div style="display:flex;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;align-items:baseline">
+    <div><p class="eyebrow">{{ h.reason|replace("_", " ") }} · {{ h.created_at|lagos }}</p><h3>Phone <span class="data">{{ r.phone or "unknown number" }}</span></h3></div>
+    {{ chip(h.status) }}
+  </div>
+  <p style="white-space:pre-line;max-width:none">{{ h.summary }}</p>
+  {% if status == "open" %}
+  {% if h.reason == "advice_question" %}
+  <form method="post" action="/vendor/questions/{{ h.id }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="advise">
+    <h4 style="margin-top:var(--space-4)">Write the answer up as advice</h4>
+    <div class="row">
+      <div><label for="qt-{{ h.id }}">About <span class="caption">required</span></label><input id="qt-{{ h.id }}" type="text" name="topic" required placeholder="what this advice is about" value="{{ d.get('topic', '') }}"></div>
+      <div><label for="qp-{{ h.id }}">Offer this product afterwards</label><select id="qp-{{ h.id }}" name="product_name"><option value="">None</option>{% for n in products %}<option {{ 'selected' if n == d.get('product_name') }}>{{ n }}</option>{% endfor %}</select></div>
+    </div>
+    <label for="qk-{{ h.id }}">Words a caller would use <span class="caption">taken from the question. Add more: at least three in all, separated by commas</span></label><input id="qk-{{ h.id }}" type="text" name="keywords" value="{{ d.get('keywords', r.words) }}">
+    <label for="qa-{{ h.id }}">Your answer, as Sofa should say it <span class="caption">required</span></label><textarea id="qa-{{ h.id }}" name="answer" required style="min-height:140px">{{ d.get('answer', '') }}</textarea>
+    <div class="actions" style="margin-top:var(--space-4)"><button>Save as advice and mark handled</button></div>
+  </form>
+  <hr>
+  {% endif %}
+  <form method="post" action="/vendor/questions/{{ h.id }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="qn-{{ h.id }}">Note <span class="caption">for example: rang them, answered</span></label>
+    <div class="actions"><input id="qn-{{ h.id }}" type="text" name="note" style="max-width:420px"><button class="ghost">Mark as handled</button></div>
+  </form>
+  {% else %}
+  <form method="post" action="/vendor/questions/{{ h.id }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="reopen"><button class="ghost">Reopen question</button></form>
+  {% endif %}
+</section>
+{% else %}
+{% if status == "open" %}
+{{ empty("No questions waiting.", "When a caller asks how or when to use something and you have no written advice for it, the question appears here.") }}
+{% else %}
+{{ empty("Nothing handled yet.", "Questions you mark as handled, or turn into advice, move here.") }}
+{% endif %}
+{% endfor %}
+{% endblock %}

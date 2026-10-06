@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "_ui.html" import chip, metric, rule %}
+{% block title %}Admin home · SOFA{% endblock %}
+
+{% block hero %}
+<section class="hero" aria-labelledby="hero-title">
+  <div class="frame">
+    <p class="eyebrow">Admin home · internal</p>
+    <h1 id="hero-title">Where do you want to go?</h1>
+    <p class="lede">Every console and every page, in one place. Say what you want to do, and the list narrows to the page that does it.</p>
+    <label for="finder-input" style="margin-top:var(--space-6)">What do you want to do? <span class="kbd">/</span> jumps here</label>
+    <input id="finder-input" type="text" autocomplete="off" placeholder="for example: change a price, approve an account, see what callers said" style="max-width:720px;min-height:52px;font-size:16px" autofocus>
+    <p class="caption" id="finder-count" role="status" aria-live="polite" style="margin-top:var(--space-2)"></p>
+  </div>
+</section>
+{% endblock %}
+
+{% block body %}
+{{ rule(1, "What do you want to do") }}
+<ul class="task-list" aria-label="Tasks">
+  {% for title, path, who, words in tasks %}
+  <li data-find="{{ title }} {{ who }} {{ words }} {{ path }}"><a href="{{ path }}"><span>{{ title }}</span><em>{{ who }}</em></a></li>
+  {% endfor %}
+</ul>
+
+{{ rule(2, "The consoles") }}
+<p class="small">You are logged in as admin, so the shop and bank consoles open without their own passwords. Their passwords are for the shop owner and the bank.</p>
+<div class="cols two">
+  {% for c in consoles %}
+  <section class="card console" data-console="{{ c.key }}" aria-labelledby="c-{{ c.key }}">
+    <div class="head">
+      <div><p class="eyebrow">{{ c.who }}</p><h3 id="c-{{ c.key }}">{{ c.name }}</h3></div>
+      {{ chip(c.state, c.label) }}
+    </div>
+    <p class="small">{{ c.what }}</p>
+    {% if c.state == "off" %}<p class="note">Switched off. Set DEMO_PAGE_ENABLED=true to turn it on: it shows what callers say, so use it with demo callers only.</p>{% endif %}
+    {% if c.password and c.key != "demo" %}<p class="caption">Demo password: <code>{{ c.password }}</code>. Change it before the internet can reach this.</p>{% endif %}
+    <div class="actions">
+      <a class="btn" href="{{ c.base }}">Open {{ c.name|lower }}</a>
+    </div>
+    <ul class="links">
+      {% for label, path, what, words in c.links %}
+      <li data-find="{{ c.name }} {{ label }} {{ what }} {{ words }} {{ path }}"><a href="{{ path }}">{{ label }}<span>{{ what }}</span></a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+</div>
+
+{{ rule(3, "This build") }}
+<div class="cols four">
+  {{ metric("Services on", services, "banking, shopping and search; switch with SERVICES_ENABLED") }}
+  {{ metric("Language model", llm_provider, llm_model) }}
+  {{ metric("Bank", bank_backend, "the built-in bank") }}
+  {{ metric("Number to call", number, "the front desk. Each shop has its own number: " ~ shop_number) }}
+</div>
+<ul class="links" style="max-width:520px">
+  <li data-find="health status check running"><a href="/health">System health<span>Is it running</span></a></li>
+  {% if api_docs %}<li data-find="api docs reference openapi developer"><a href="/docs">API reference<span>For developers</span></a></li>{% endif %}
+</ul>
+{% endblock %}

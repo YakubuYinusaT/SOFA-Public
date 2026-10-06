@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Metrics · SOFA admin{% endblock %}
+{% block body %}
+{% macro pct(v) %}{{ "%.0f%%"|format(v * 100) if v is not none else "n/a" }}{% endmacro %}
+<h1>Validation metrics</h1>
+<p class="muted small">For the NAIC "real-world validation" evidence. Team test calls are excluded. WER, intent and match figures come only from turns a person has labelled, so read them with the sample size beside them.</p>
+
+<div class="grid">
+  <div class="card stat"><b>{{ m.real_interactions }}</b><span>real interactions (minimum 50)</span></div>
+  <div class="card stat"><b>{{ m.unique_callers }}</b><span>unique callers</span></div>
+  <div class="card stat"><b>{{ pct(m.task_completion_rate) }}</b><span>task completion (no handoff)</span></div>
+  <div class="card stat"><b>{{ pct(m.handoff_rate) }}</b><span>handoff rate</span></div>
+  <div class="card stat"><b>{{ pct(m.clarification_rate) }}</b><span>items needing a clarifying question</span></div>
+  <div class="card stat"><b>{{ ((m.median_latency_ms or 0) / 1000)|round(1) if m.median_latency_ms else "n/a" }}{{ " s" if m.median_latency_ms }}</b><span>median time to reply (target under 4 s)</span></div>
+  <div class="card stat"><b>{{ m.confirmed_orders }}</b><span>orders, {{ (m.order_value_naira * 100)|naira }}</span></div>
+  <div class="card stat"><b>{{ m.labelled_turns }}</b><span>turns labelled</span></div>
+</div>
+
+<h2>Accuracy by language (labelled turns)</h2>
+<div class="tablewrap"><table>
+  <tr><th>Language</th><th>Labelled turns</th><th>Word error rate</th><th>Intent accuracy</th><th>Product match accuracy</th><th>Code-mixed</th></tr>
+  {% for r in m.by_language %}<tr><td>{{ r.language }}</td><td>{{ r.labelled_turns }}</td>
+    <td>{{ ("%.0f%%"|format(r.wer_mean * 100)) if r.wer_mean is not none else "n/a" }} <span class="muted small">(n={{ r.wer_sample }})</span></td>
+    <td>{{ pct(r.intent_accuracy) }} <span class="muted small">(n={{ r.intent_sample }})</span></td>
+    <td>{{ pct(r.match_accuracy) }} <span class="muted small">(n={{ r.match_sample }})</span></td>
+    <td>{{ r.code_mixed }} of {{ r.labelled_turns }}</td></tr>
+  {% else %}<tr><td colspan="6" class="muted">Nothing labelled yet: use the Label page.</td></tr>{% endfor %}
+</table></div>
+
+<h2>Does it improve? First calls against latest calls</h2>
+{% if m.early_vs_late %}{% set e = m.early_vs_late %}
+<div class="tablewrap"><table>
+  <tr><th></th><th>First {{ e.window }} calls</th><th>Last {{ e.window }} calls</th></tr>
+  <tr><td>Task completion</td><td>{{ pct(e.first.task_completion_rate) }}</td><td>{{ pct(e.last.task_completion_rate) }}</td></tr>
+  <tr><td>Handoff rate</td><td>{{ pct(e.first.handoff_rate) }}</td><td>{{ pct(e.last.handoff_rate) }}</td></tr>
+  <tr><td>Clarification rate</td><td>{{ pct(e.first.clarification_rate) }}</td><td>{{ pct(e.last.clarification_rate) }}</td></tr>
+  <tr><td>Median latency</td><td>{{ e.first.median_latency_ms|round(0) if e.first.median_latency_ms else "n/a" }} ms</td><td>{{ e.last.median_latency_ms|round(0) if e.last.median_latency_ms else "n/a" }} ms</td></tr>
+</table></div>{% if e.note %}<p class="muted small">{{ e.note }}</p>{% endif %}
+{% else %}<p class="muted">Needs at least 6 real calls.</p>{% endif %}
+
+<h2>Real interactions per day</h2>
+<div class="tablewrap"><table><tr><th>Date</th><th>Interactions</th></tr>
+  {% for d in m.per_day %}<tr><td>{{ d.date }}</td><td>{{ d.real_interactions }}</td></tr>{% else %}<tr><td colspan="2" class="muted">None yet.</td></tr>{% endfor %}</table></div>
+
+<h2>Anonymised exports</h2>
+<div class="card">
+  <p><a class="btn small" href="/admin/export/calls.csv">calls.csv</a> <a class="btn small" href="/admin/export/turns.csv">turns.csv</a>
+     <a class="btn small ghost" href="/admin/export/speech.jsonl">speech.jsonl</a> <a class="btn small ghost" href="/admin/export/understanding.jsonl">understanding.jsonl</a></p>
+  <p class="muted small">Callers are pseudonymised; phone numbers, names and known addresses are removed from text. This is a best-effort filter: read a sample before sharing. The two training files hold only labelled turns whose caller heard the recording notice, and audio is exported as a file path only (a voice cannot be anonymised). The notice says calls are recorded to process orders and improve the service; get legal advice on whether that covers using recordings to train models before you train on them.</p>
+</div>
+{% endblock %}

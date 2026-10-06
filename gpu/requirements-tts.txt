@@ -1,0 +1,11 @@
+# As in the YarnGPT2 model card: pip install outetts uroman (plus the yarngpt repo and the
+# WavTokenizer files, see gpu/README.md).
+torch
+torchaudio
+transformers
+outetts
+uroman
+numpy
+fastapi
+uvicorn[standard]
+pydantic

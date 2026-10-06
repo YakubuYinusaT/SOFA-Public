@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_ui.html" import chip, metric, rule, empty %}
+{% block title %}Desk · {{ brand }}{% endblock %}
+{% block body %}
+<header class="page-head">
+  <p class="eyebrow">{{ bank.name }} · service desk</p>
+  <h1>What is waiting for the bank</h1>
+  <p class="lede">When Sofa cannot finish helping a caller, it tells them {{ bank.name }} will follow up. This is where that lands.</p>
+</header>
+
+{{ rule(1, "Waiting now") }}
+<div class="cols four">
+  {{ metric("Follow-ups", open_handoffs, "callers to phone back, " ~ as_of(), exposed=(open_handoffs > 0)) }}
+  {{ metric("ID check", waiting.awaiting_identity_verification, "applications waiting for the ID check, " ~ as_of()) }}
+  {{ metric("Review", waiting.under_review, "applications ready to approve or reject, " ~ as_of()) }}
+  {{ metric("Complaints", complaints, "logged by phone, " ~ as_of()) }}
+</div>
+<div class="actions">
+  <a class="btn" href="/provider/handoffs">Phone back callers</a>
+  <a class="btn ghost" href="/provider/applications">Review account applications</a>
+</div>
+
+{{ rule(2, "Latest follow-ups") }}
+{% if recent %}
+<div class="tablewrap"><table class="responsive">
+  <caption>The five most recent, newest first</caption>
+  <thead><tr><th scope="col">Opened</th><th scope="col">Caller</th><th scope="col">Why</th><th scope="col">State</th></tr></thead>
+  <tbody>
+  {% for h in recent %}<tr><td data-label="Opened" class="data-s">{{ h.created_at|lagos }}</td><td data-label="Caller" class="data">{{ caller_of(h) or "unknown" }}</td>
+    <td data-label="Why">{{ reasons.get(h.reason, h.reason|replace("_", " ")) }}</td><td data-label="State">{{ chip(h.status) }}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+{{ empty("Nothing has been passed to the bank yet.", "A follow-up appears here when a caller's request cannot be finished: for example account details that do not match, or a request to speak to someone.") }}
+{% endif %}
+{% endblock %}

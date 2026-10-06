@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Calls · SOFA admin{% endblock %}
+{% block body %}
+<h1>Calls</h1>
+<form method="get" class="card" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end">
+  <div><label>Outcome</label><select name="outcome"><option value="">all</option>{% for o in outcomes %}<option {{ 'selected' if o == outcome }}>{{ o }}</option>{% endfor %}</select></div>
+  <label class="inline"><input type="checkbox" name="tests" value="1" {{ 'checked' if tests }}> include team test calls</label>
+  <button>Filter</button>
+</form>
+<div class="tablewrap"><table>
+  <tr><th>Started (Lagos)</th><th>Merchant</th><th>Caller</th><th>Lang</th><th>Turns</th><th>Outcome</th><th></th></tr>
+  {% for c in rows %}<tr>
+    <td>{{ c.started_at|lagos }}</td><td>{{ merchants.get(c.merchant_id, "") }}</td><td>{{ c.from_number }} {% if c.is_test %}<span class="pill">test</span>{% endif %}</td>
+    <td>{{ c.language or "" }}</td><td>{{ c.turns|length }}</td>
+    <td>{{ c.outcome or "in progress" }} {% if c.handoff_id %}<span class="pill warn">handoff</span>{% endif %}</td>
+    <td><a href="/admin/calls/{{ c.id }}">open</a></td></tr>
+  {% else %}<tr><td colspan="7" class="muted">No calls.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

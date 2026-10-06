@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Languages · SOFA admin{% endblock %}
+{% block body %}
+<h1>Languages and translations</h1>
+<p class="muted">Sofa's English wording is written in the code. The other languages come from a translator's spreadsheet. Any phrase without a translation is spoken in English, in the English voice, so a caller never hears English read by a Yoruba voice.</p>
+
+<div class="tablewrap"><table>
+  <tr><th>Language</th><th>Phrases translated</th><th style="width:30%"></th><th>Still missing</th></tr>
+  {% for r in rows %}<tr><td>{{ r.name }}</td><td>{{ r.done }} / {{ r.total }}</td>
+    <td><div class="bar2"><i style="width:{{ (100 * r.done / r.total) if r.total else 0 }}%"></i></div></td>
+    <td class="small">{% if r.n_missing %}{{ r.missing|join(", ") }}{% if r.n_missing > r.missing|length %} and {{ r.n_missing - r.missing|length }} more{% endif %}{% else %}<span class="pill ok">complete</span>{% endif %}</td></tr>{% endfor %}
+</table></div>
+
+<div class="row" style="margin-top:14px">
+  <div class="card"><h3>1. Send the sheet to your translator</h3>
+    <p class="small">One spreadsheet with every sentence, when it is spoken, and what fills each {placeholder}. The most-used sentences come first. Existing translations are pre-filled.</p>
+    <a class="btn" href="/admin/translation-sheet.xlsx">Download the sheet</a></div>
+  <form class="card" method="post" action="/admin/languages/import" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <h3>2. Upload the filled sheet</h3>
+    <input type="file" name="file" accept=".xlsx,.csv" required>
+    <p><label class="inline"><input type="checkbox" name="dry_run"> just check it, do not save</label>
+       <label class="inline"><input type="checkbox" name="allow_partial"> save the good rows even if some have errors</label></p>
+    <button>Check and import</button>
+    <p class="muted small">Every cell is checked: same {placeholders} as the English, no numbers, questions stay questions. By default nothing is saved if anything is wrong. This changes the running server only; restart any other server processes to pick it up.</p></form>
+</div>
+
+{% if report %}
+<div class="card">
+  <h3>{% if report.dry %}<span class="pill {{ 'bad' if report.errors else 'ok' }}">Checked, nothing saved</span>{% elif report.errors and not report.wrote %}<span class="pill bad">Nothing saved</span>{% else %}<span class="pill ok">Saved</span>{% endif %}</h3>
+  {% if report.errors %}<p><b>{{ report.errors|length }} problem{{ "s" if report.errors|length != 1 }} to fix{% if report.wrote %} (these cells were skipped){% endif %}:</b></p><ul class="plain">{% for e in report.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  {% if report.warnings %}<p><b>Worth a look:</b></p><ul class="plain">{% for w in report.warnings %}<li class="muted">{{ w }}</li>{% endfor %}</ul>{% endif %}
+</div>{% endif %}
+{% endblock %}

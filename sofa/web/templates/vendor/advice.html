@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "_ui.html" import chip, rule, empty %}
+{% block title %}Advice · {{ brand }}{% endblock %}
+{% block body %}
+<header class="page-head">
+  <p class="eyebrow">{{ m.name }} · advice</p>
+  <h1>Advice Sofa gives</h1>
+  <p class="lede">When a caller asks how or when to use something, Sofa says your answer exactly as you write it here, then offers the product.</p>
+</header>
+<div class="flash warn" role="note"><b>Sample guidance.</b> The entries below were written to show how this works. Check them with your agronomist and change them to what your store recommends before a farmer relies on them.
+  Sofa never makes advice up: a question with no matching entry is passed to you under <a href="/vendor/questions">customer questions</a>.</div>
+
+{{ rule(1, "Your advice") }}
+{% if rows %}
+{% for a in rows %}
+<form method="post" action="/vendor/advice/{{ a.id }}" class="card" aria-label="Advice about {{ a.topic }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="head" style="display:flex;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap"><h3>{{ a.topic }}</h3>{{ chip("active" if a.active else "inactive", "Sofa uses this" if a.active else "Switched off") }}</div>
+  <div class="row">
+    <div><label for="t-{{ a.id }}">About <span class="caption">required</span></label><input id="t-{{ a.id }}" type="text" name="topic" value="{{ a.topic }}" required></div>
+    <div><label for="p-{{ a.id }}">Offer this product afterwards</label><select id="p-{{ a.id }}" name="product_name"><option value="">None</option>{% for n in products %}<option {{ 'selected' if n == a.product_name }}>{{ n }}</option>{% endfor %}</select></div>
+    <div><label class="inline" style="margin-top:var(--space-6)"><input type="checkbox" name="active" {{ 'checked' if a.active }}> Sofa uses this advice</label></div>
+  </div>
+  <label for="k-{{ a.id }}">Words a caller would use <span class="caption">at least three; Sofa needs two of them to pick this advice</span></label>
+  <textarea id="k-{{ a.id }}" name="keywords" style="min-height:64px">{{ a.keywords }}</textarea>
+  <label for="a-{{ a.id }}">What Sofa says <span class="caption">required, under 900 characters</span></label>
+  <textarea id="a-{{ a.id }}" name="answer" required style="min-height:140px">{{ a.answer }}</textarea>
+  <div class="actions" style="margin-top:var(--space-4)"><button>Save advice</button><button class="danger" name="delete" value="1">Delete advice</button></div>
+</form>
+{% endfor %}
+{% else %}
+{{ empty("No advice written yet.", "Add an entry below. When a caller asks about it, Sofa speaks your words and offers the product you choose.") }}
+{% endif %}
+
+{{ rule(2, "Add advice") }}
+<form method="post" action="/vendor/advice" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="row">
+    <div><label for="new-topic">About <span class="caption">required</span></label><input id="new-topic" type="text" name="topic" required placeholder="for example Fertilizer for cassava" value="{{ draft.get('topic', '') }}"></div>
+    <div><label for="new-product">Offer this product afterwards</label><select id="new-product" name="product_name"><option value="">None</option>{% for n in products %}<option {{ 'selected' if n == draft.get('product_name') }}>{{ n }}</option>{% endfor %}</select></div>
+  </div>
+  <label for="new-keywords">Words a caller would use <span class="caption">required: at least three, separated by commas</span></label>
+  <textarea id="new-keywords" name="keywords" style="min-height:64px" placeholder="cassava, fertilizer, npk, apply, acre">{{ draft.get('keywords', '') }}</textarea>
+  <label for="new-answer">What Sofa says <span class="caption">required, under 900 characters: it is read out loud, and a caller will not listen to more than about a minute</span></label>
+  <textarea id="new-answer" name="answer" required style="min-height:140px">{{ draft.get('answer', '') }}</textarea>
+  <div class="actions" style="margin-top:var(--space-4)"><button>Add advice</button></div>
+</form>
+{% endblock %}

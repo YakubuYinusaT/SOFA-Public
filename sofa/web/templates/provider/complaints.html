@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_ui.html" import rule, empty %}
+{% block title %}Complaints · {{ brand }}{% endblock %}
+{% block body %}
+<header class="page-head">
+  <p class="eyebrow">{{ bank.name }} · complaints</p>
+  <h1>Complaints logged by phone</h1>
+  <p class="lede">Each complaint has a reference. Sofa gives the caller the same reference.</p>
+</header>
+{% if rows %}
+<div class="tablewrap"><table class="responsive">
+  <caption>{{ rows|length }} complaint{{ "s" if rows|length != 1 }}, newest first, {{ as_of() }}</caption>
+  <thead><tr><th scope="col">Logged</th><th scope="col">Reference</th><th scope="col">Caller</th><th scope="col">Details</th></tr></thead>
+  <tbody>
+  {% for r in rows %}<tr><td data-label="Logged" class="data-s">{{ r.c.created_at|lagos }}</td><td data-label="Reference" class="data">{{ r.c.reference }}</td><td data-label="Caller" class="data">{{ r.phone }}</td><td data-label="Details">{{ r.c.details }}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+{{ empty("No complaints yet.", "A complaint appears here when a caller tells Sofa about a problem with their account or card and it is logged with the bank.") }}
+{% endif %}
+{% endblock %}

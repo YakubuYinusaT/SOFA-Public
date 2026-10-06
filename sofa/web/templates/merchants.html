@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Merchants · SOFA admin{% endblock %}
+{% block body %}
+<h1>Merchants</h1>
+<div class="tablewrap"><table>
+  <tr><th>Business</th><th>Number customers dial</th><th>Owner</th><th>Language</th><th>Payment</th><th>Products</th><th>Status</th><th></th></tr>
+  {% for r in rows %}<tr>
+    <td><a href="/admin/merchants/{{ r.m.id }}">{{ r.m.name }}</a><br><span class="muted small">{{ r.m.category }}</span></td>
+    <td>{{ r.numbers|join(", ") or "none yet" }}</td>
+    <td>{% if r.owner %}{{ r.owner.name }}<br><span class="muted small">{{ r.owner.phone }}</span>{% endif %}</td>
+    <td>{{ r.m.default_language }}</td><td>{{ r.m.payment_mode|replace("_", " ") }}</td><td>{{ r.products }}</td>
+    <td><span class="pill {{ 'ok' if r.m.status == 'active' else 'warn' }}">{{ r.m.status }}</span></td>
+    <td><a href="/admin/merchants/{{ r.m.id }}/products">catalog</a></td></tr>
+  {% else %}<tr><td colspan="8" class="muted">No merchants yet. Add the first one below.</td></tr>{% endfor %}
+</table></div>
+
+<h2>Add a merchant</h2>
+<form class="card" method="post" action="/admin/merchants">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="row">
+    <div><label>Business name</label><input type="text" name="name" required></div>
+    <div><label>Category</label><input type="text" name="category" value="provisions" placeholder="pharmacy, provisions, gas..."></div>
+    <div><label>Owner name</label><input type="text" name="owner_name" required></div>
+    <div><label>Owner phone (can update stock by voice)</label><input type="text" name="owner_phone" placeholder="0803 123 4567" required></div>
+    <div><label>Number customers will dial</label><input type="text" name="number" placeholder="+234..." required></div>
+    <div><label>Greeting language</label><select name="default_language">{% for l in languages %}<option value="{{ l }}">{{ l }}</option>{% endfor %}</select></div>
+    <div><label>Payment</label><select name="payment_mode">{% for m in modes %}<option value="{{ m }}">{{ m|replace("_", " ") }}</option>{% endfor %}</select></div>
+  </div>
+  <p class="muted small">A merchant is live when it has a number, a catalog with prices, and an owner phone. Then: test call from a team phone, then from the owner's.</p>
+  <button>Create merchant</button>
+</form>
+{% endblock %}

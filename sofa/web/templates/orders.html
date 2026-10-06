@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Orders · SOFA admin{% endblock %}
+{% block body %}
+<h1>Orders</h1>
+<form method="get" class="card" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+  <div><label>Status</label><select name="status"><option value="">all (except drafts)</option>{% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s == status }}>{{ s|replace("_", " ") }}</option>{% endfor %}</select></div>
+  <div><label>Merchant</label><select name="merchant"><option value="">all</option>{% for m in all_merchants %}<option value="{{ m.id }}" {{ 'selected' if m.id|string == merchant }}>{{ m.name }}</option>{% endfor %}</select></div>
+  <button>Filter</button>
+</form>
+<div class="tablewrap"><table>
+  <tr><th>Placed</th><th>Merchant</th><th>Customer</th><th>Items</th><th class="right">Total</th><th>Status</th><th></th></tr>
+  {% for r in rows %}<tr>
+    <td>{{ r.o.created_at|lagos }}</td><td>{{ r.merchant.name }}</td>
+    <td>{{ r.customer.name or "" }}<br><span class="muted small">{{ r.customer.phone }}</span></td>
+    <td>{{ r.lines }}<br><span class="muted small">{{ r.o.delivery_address or "" }}</span></td>
+    <td class="right">{{ r.o.total_kobo|naira }}</td>
+    <td><span class="pill {{ 'ok' if r.o.status in ('paid','delivered') else 'bad' if r.o.status == 'cancelled' else 'warn' }}">{{ r.o.status|replace("_", " ") }}</span></td>
+    <td><a href="/admin/orders/{{ r.o.id }}">open</a></td></tr>
+  {% else %}<tr><td colspan="7" class="muted">No orders.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}
