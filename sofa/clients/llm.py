@@ -54,6 +54,10 @@ def strict_schema(schema):
     return out
 
 
+TURN_MAX_TOKENS = 600     # a whole shop turn as JSON (items, the reply sentence, flags) runs past 200 tokens on the real model
+EXTRACT_MAX_TOKENS = 400  # the gateway's understanding and wording answers
+
+
 class LLMClient:
     """OpenAI-compatible chat completions: vLLM serving NCAIR1/N-ATLaS or,
     with llm_provider="openai", a hosted model through the same kind of API (a hosted-model build). Guided decoding forces valid JSON."""
@@ -95,7 +99,7 @@ class LLMClient:
             user = f"TRANSCRIPT: {transcript}"
             if alternatives:  # another language model heard the same audio: the caller may be mixing languages
                 user += "\nALSO HEARD (same audio, read by another language model): " + " | ".join(alternatives)
-            content = await self._chat(system, user, **constraint)
+            content = await self._chat(system, user, max_tokens=TURN_MAX_TOKENS, **constraint)  # the default of 200 cut the model's answer off mid-sentence
             raw = json.loads(content)
             return TurnJSON.model_validate(raw), raw
         except (ValidationError, json.JSONDecodeError, KeyError) as exc:
@@ -109,7 +113,7 @@ class LLMClient:
             user = f"TRANSCRIPT: {transcript}"
             if alternatives:
                 user += "\nALSO HEARD (same audio, read by another language model): " + " | ".join(alternatives)
-            raw = json.loads(await self._chat(system, user, **constraint))
+            raw = json.loads(await self._chat(system, user, max_tokens=EXTRACT_MAX_TOKENS, **constraint))
             return model.model_validate(raw), raw
         except (ValidationError, json.JSONDecodeError, KeyError) as exc:
             log.warning("extraction rejected: %s", exc)

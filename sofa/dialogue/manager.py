@@ -414,6 +414,8 @@ class DialogueManager:
             if tj.intent == "confirm":
                 self._added = []
                 return await self.run_items([Item(spoken_name=pending["product"], action="add")], fresh=True)
+            if tj.intent in ("place_order", "modify_order") and tj.items:  # the caller ignored the offer and asked for something: that is a new order, not a "no"
+                return None
             return self.reply("declined", action="advice_offer_declined")
 
         if kind == "substitute":

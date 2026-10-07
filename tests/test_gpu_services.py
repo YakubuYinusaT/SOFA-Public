@@ -11,10 +11,11 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from gpu.audioutil import resample, to_wav_bytes
-from gpu.textnorm import chunk_text, normalize_for_tts, spell_number
+from gpu.audioutil import insert_pauses, resample, to_wav_bytes
+from gpu.textnorm import chunk_text, expand_contractions, normalize_for_tts, speech_plan, spell_number
+from gpu.timestretch import stretch
 from gpu.tts_server import create_app
-from sofa.clients.llm import LLMClient
+from sofa.clients.llm import TURN_MAX_TOKENS, LLMClient
 
 
 class FakeEngine:
@@ -51,8 +52,10 @@ def test_tts_returns_8khz_mono_wav(tts, engine):
     assert r.status_code == 200 and r.headers["content-type"] == "audio/wav"
     channels, rate, seconds = read_wav(r.content)
     assert (channels, rate) == (1, 8000) and seconds > 0.4
-    assert "fourteen thousand naira" in engine.calls[0][0]  # digits are spelled out before synthesis
-    assert engine.calls[0][1:] == ("en", "idera")  # fixed default voice
+    spoken = " ".join(c[0] for c in engine.calls)
+    assert "fourteen thousand naira" in spoken  # digits are spelled out before synthesis
+    assert "that is" in spoken and "that's" not in spoken  # and contractions are written out: the voice reads "thats" badly
+    assert engine.calls[0][1:] == ("en", "jude")  # fixed default voice
 
 
 def test_tts_speaker_language_and_sample_rate(tts, engine, monkeypatch):
@@ -152,7 +155,7 @@ async def test_modern_vllm_request_shape():
     assert tj.intent == "confirm"
     body = sent[0]
     assert body["response_format"]["type"] == "json_schema" and body["response_format"]["json_schema"]["schema"]["properties"]["intent"]
-    assert "guided_json" not in body and body["temperature"] == 0.1 and body["max_tokens"] == 200
+    assert "guided_json" not in body and body["temperature"] == 0.1 and body["max_tokens"] == TURN_MAX_TOKENS
     assert body["model"] == "NCAIR1/N-ATLaS"
     assert captured_headers[-1]["authorization"] == "Bearer k123"
 
@@ -190,7 +193,7 @@ def test_tts_warmup_runs_once_and_never_blocks_startup():
 
     engine = FakeEngine()
     warmup(engine)
-    assert engine.calls == [("Hello.", "en", "idera")]
+    assert engine.calls == [("Hello.", "en", "jude")]
 
     class Broken(FakeEngine):
         def synthesize(self, *a):
@@ -201,3 +204,67 @@ def test_tts_warmup_runs_once_and_never_blocks_startup():
 
 def test_gpu_services_hide_api_docs(tts):
     assert tts.get("/docs").status_code == 404 and tts.get("/openapi.json").status_code == 404
+
+
+def test_stretch_changes_the_length_but_not_the_pitch():
+    t = np.linspace(0, 1.0, 24000, endpoint=False)
+    tone = (0.3 * np.sin(2 * np.pi * 440 * t)).astype(np.float32)
+    for rate in (0.8, 0.9, 1.2):
+        out = stretch(tone, rate)
+        assert abs(len(out) / len(tone) - 1 / rate) < 0.04
+        peak = np.argmax(np.abs(np.fft.rfft(out[2000:-2000]))) * 24000 / (len(out) - 4000)
+        assert abs(peak - 440) < 12  # still the same note
+    assert len(stretch(tone, 1.0)) == len(tone)  # a rate of 1 leaves the clip alone
+
+
+def test_tts_speed_slows_a_clip_and_defaults_to_the_server_setting(tts, monkeypatch):
+    normal = read_wav(tts.post("/tts", json={"text": "Hello there", "language": "en"}).content)[2]
+    slower = read_wav(tts.post("/tts", json={"text": "Hello there", "language": "en", "speed": 0.8}).content)[2]
+    assert slower > normal * 1.15
+    monkeypatch.setenv("TTS_SPEED", "0.8")
+    from_setting = read_wav(tts.post("/tts", json={"text": "Hello there", "language": "en"}).content)[2]
+    assert abs(from_setting - slower) < 0.02
+    assert tts.post("/tts", json={"text": "Hello", "language": "en", "speed": 3}).status_code == 422
+
+
+def test_contractions_are_written_out_for_the_voice():
+    assert expand_contractions("That's 76,000 naira, I've sent it; we'll call. Didn't you say it's ready? Can't, won't, let's, I'm, they're.") ==         "That is 76,000 naira, I have sent it; we will call. Did not you say it is ready? cannot, will not, let us, I am, they are."
+    assert normalize_for_tts("What's the owner's name?", "en") == "What is the owner's name?"  # a possessive is not a contraction
+
+
+def test_the_voice_pauses_at_commas_and_full_stops():
+    plan = speech_plan("Please wait a moment, I will check the stock for you. Is that alright with you?", "clause")
+    assert [(t, s) for t, s, _ in plan] == [("Please wait a moment", 0.22), ("I will check the stock for you", 0.5), ("Is that alright with you", 0.55)]
+    assert [(t, s) for t, s, _ in speech_plan("Please wait a moment, I will check the stock for you.", "sentence")] == [("Please wait a moment, I will check the stock for you", 0.5)]
+    assert [t for t, _, _ in speech_plan("Hello. Where are you? Fine.", "all")] == ["Hello", "Where are you", "Fine"]
+    assert speech_plan("   ") == []
+
+
+def test_short_pieces_are_spoken_with_a_neighbour_but_keep_their_pause():
+    plan = speech_plan("Done. I have sent the account number to this phone by text. Thank you.", "clause")
+    assert [t for t, _, _ in plan] == ["Done I have sent the account number to this phone by text Thank you"]  # one go: 1 or 2 words alone are rushed
+    (_, after, marks) = plan[0]
+    assert after == 0.5 and [round(s, 2) for _, s in marks] == [0.5, 0.5]  # but both full stops are still pauses
+    assert marks[0][0] < 0.2 and marks[1][0] > 0.8  # near the start and near the end, where they were
+    assert [t for t, _, _ in speech_plan("Where should we deliver?", "clause")] == ["Where should we deliver"]  # nothing to join to
+
+
+def test_a_pause_goes_in_at_the_quietest_moment_near_the_mark():
+    sr = 8000
+    t = np.arange(sr * 2) / sr
+    voice = (0.3 * np.sin(2 * np.pi * 200 * t)).astype(np.float32)
+    voice[int(sr * 0.95):int(sr * 1.05)] = 0.0  # a natural dip about halfway
+    out = insert_pauses(voice, sr, [(0.5, 0.5)])
+    assert len(out) == len(voice) + int(0.5 * sr)
+    middle = out[int(sr * 0.9):int(sr * 1.6)]
+    assert (np.abs(middle) < 1e-6).sum() >= int(0.5 * sr)  # the pause is silence
+    assert np.array_equal(insert_pauses(voice, sr, []), voice) and len(insert_pauses(voice[:100], sr, [(0.5, 0.5)])) == 100  # nothing to do, or too short
+
+
+def test_tts_puts_real_silence_after_a_full_stop(tts, engine):
+    one = read_wav(tts.post("/tts", json={"text": "Hello there my friend", "language": "en"}).content)[2]
+    two = read_wav(tts.post("/tts", json={"text": "Hello there my friend. How are you today?", "language": "en"}).content)[2]
+    assert two > 2 * one + 0.4  # two clips of the same length, with a full-stop pause between them, not run together
+    off = read_wav(tts.post("/tts", json={"text": "Hello there my friend. How are you today?", "language": "en", "split": "off"}).content)[2]
+    assert off < two  # the old way gave only a short fixed gap
+    assert tts.post("/tts", json={"text": "Hello", "language": "en", "split": "everywhere"}).status_code == 422

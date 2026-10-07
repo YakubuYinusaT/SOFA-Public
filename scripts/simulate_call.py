@@ -67,9 +67,14 @@ def run_call(client: TestClient, lines: list[str] | None, caller: str, dest: str
         if spoken.strip():  # an empty line simulates silence (no recording)
             data["recordingUrl"] = mock_recording_url(spoken, spoken_lang)
         r = client.post(f"/voice/turn/{secret}", data=data)
-        if "<Redirect>" in r.text and "<GetDigits" not in r.text:  # slow turn: filler, then the real reply (after a keypad prompt a Redirect is only the timeout fallback)
+        hops = 0
+        while "<Redirect>" in r.text and "<GetDigits" not in r.text and hops < 12:  # slow turn: holding messages, then the real reply (after a keypad prompt a Redirect is only the timeout fallback)
+            held = r.headers.get("X-Sofa-Reply-Text", "")
+            if held:
+                echo(f"  Sofa (holding): {held}")
             path = r.text.split("<Redirect>")[1].split("</Redirect>")[0].replace(get_settings().public_base_url, "")
             r = client.post(path, data={"sessionId": session_id})
+            hops += 1
         active = show(r)
     client.post(f"/voice/events/{secret}", data={"sessionId": session_id, "isActive": "0", "durationInSeconds": "60"})
     return replies

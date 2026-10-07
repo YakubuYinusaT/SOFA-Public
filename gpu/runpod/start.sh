@@ -40,6 +40,7 @@ export VENV_LLM=/workspace/venvs/llm VENV_ASR=/workspace/venvs/asr VENV_TTS=/wor
 export LOGDIR="${LOGDIR:-/workspace/logs}"
 export ASR_LANGUAGES="${ASR_LANGUAGES:-en,yo}"   # pilot languages: only these speech models are loaded (keep equal to the backend ENABLED_LANGUAGES)
 export MODE="${MODE:-fp8}"   # RTX 4090 (24 GB): fp8 is the only mode that fits LLM + ASR + TTS. See gpu/README.md
+export TTS_SPEED="${TTS_SPEED:-0.92}"   # a little slower than the model speaks, same pitch (1.0 = as the model speaks)
 
 # The RunPod pod image runs nginx on several ports as placeholder pages, and one of them is 8001, the language model's port. Free it,
 # otherwise vLLM stops with "Address already in use" while the health check still sees nginx answering. (Jupyter and the web

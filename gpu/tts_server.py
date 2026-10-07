@@ -15,22 +15,23 @@ import asyncio
 import logging
 import os
 import time
-from typing import Protocol
+from typing import Literal, Protocol
 
 import numpy as np
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from .audioutil import resample, silence, to_wav_bytes
+from .audioutil import insert_pauses, resample, silence, to_wav_bytes
 from .common import require_key
-from .textnorm import chunk_text, normalize_for_tts
+from .timestretch import stretch
+from .textnorm import normalize_for_tts, speech_plan
 
 log = logging.getLogger("sofa.tts")
 
 LANG_NAMES = {"en": "english", "yo": "yoruba", "ha": "hausa", "ig": "igbo"}
-# One fixed voice per language for the whole pilot (spec). Override with SPEAKER_EN etc.
-DEFAULT_SPEAKERS = {"en": "idera", "yo": "yoruba_female2", "ha": "hausa_female1", "ig": "igbo_female1"}
+# One fixed voice per language for the whole pilot (spec). Override with SPEAKER_EN etc. English is jude: it was read back best by the speech recogniser (docs/model_log.md).
+DEFAULT_SPEAKERS = {"en": "jude", "yo": "yoruba_female2", "ha": "hausa_female1", "ig": "igbo_female1"}
 MODEL_SAMPLE_RATE = 24000
 MAX_CHARS = int(os.environ.get("TTS_MAX_CHARS", "200"))
 MAX_TEXT = 600
@@ -63,6 +64,7 @@ class YarnGPT2Engine:
             from audiotokenizer import AudioTokenizerV2  # repo dir itself on PYTHONPATH
 
         self.torch = torch
+        self.static_cache = os.environ.get("TTS_STATIC_CACHE", "1") != "0"
         self.tokenizer = AudioTokenizerV2(
             "saheedniyi/YarnGPT2", os.environ["WAVTOKENIZER_CKPT"], os.environ["WAVTOKENIZER_CONFIG"]
         )
@@ -72,16 +74,28 @@ class YarnGPT2Engine:
             .eval()
         )
 
+    def generate(self, input_ids):
+        """The speech tokens for a prompt. A fixed-size (static) cache lets PyTorch compile the one-token step, which about doubles the speed
+        (35 to 68 tokens a second on an L4; speech needs 75 a second). The first call pays a compile of about a minute, so `warmup` makes it at
+        startup. If the host cannot do it, the plain method is used from then on."""
+        kwargs = dict(input_ids=input_ids, attention_mask=self.torch.ones_like(input_ids), temperature=0.1, repetition_penalty=1.1, max_length=4000,
+                      pad_token_id=0)
+        with self.torch.inference_mode():
+            if self.static_cache:
+                try:
+                    return self.model.generate(cache_implementation="static", **kwargs)
+                except Exception:
+                    log.exception("the static cache did not work on this host: using the plain method from now on")
+                    self.static_cache = False
+            return self.model.generate(**kwargs)
+
     def synthesize(self, text: str, language: str, speaker: str) -> tuple[np.ndarray, int]:
         try:
             prompt = self.tokenizer.create_prompt(text, lang=LANG_NAMES[language], speaker_name=speaker)
         except Exception as exc:  # unknown speaker/language names surface as a 400, not a 500
             raise ValueError(f"cannot build prompt for {language}/{speaker}: {exc}") from exc
         input_ids = self.tokenizer.tokenize_prompt(prompt)
-        with self.torch.inference_mode():
-            output = self.model.generate(
-                input_ids=input_ids, temperature=0.1, repetition_penalty=1.1, max_length=4000
-            )
+        output = self.generate(input_ids)
         codes = self.tokenizer.get_codes(output)
         audio = self.tokenizer.get_audio(codes)  # torch tensor [1, T] at 24 kHz
         return audio.squeeze().float().cpu().numpy(), MODEL_SAMPLE_RATE
@@ -92,6 +106,8 @@ class TTSRequest(BaseModel):
     language: str = "en"
     speaker: str | None = None
     sample_rate: int = 8000
+    split: Literal["off", "sentence", "clause", "all"] | None = None  # where to pause (see textnorm.speech_plan); left out, TTS_SPLIT (default clause)
+    speed: float | None = Field(default=None, ge=0.6, le=1.4)  # 0.9 = ten percent slower, same pitch; left out, TTS_SPEED (default 1.0) is used
 
 
 def speaker_for(language: str, requested: str | None) -> str:
@@ -113,24 +129,26 @@ def create_app(engine: Engine) -> FastAPI:
         if req.sample_rate not in (8000, 16000, 24000):
             raise HTTPException(400, "sample_rate must be 8000, 16000 or 24000")
         speaker = speaker_for(req.language, req.speaker)
-        chunks = chunk_text(normalize_for_tts(req.text, req.language), MAX_CHARS)
-        if not chunks:
+        speed = req.speed or float(os.environ.get("TTS_SPEED", "1.0"))
+        plan = speech_plan(normalize_for_tts(req.text, req.language), req.split or os.environ.get("TTS_SPLIT", "clause"), MAX_CHARS)
+        if not plan:
             raise HTTPException(400, "empty text")
 
         started = time.perf_counter()
         parts: list[np.ndarray] = []
         try:
             async with lock:
-                for chunk in chunks:
+                for chunk, pause, inside in plan:
                     audio, sr = await asyncio.to_thread(engine.synthesize, chunk, req.language, speaker)
-                    parts.append(resample(audio, sr, req.sample_rate))
-                    parts.append(silence(0.15, req.sample_rate))
+                    audio = insert_pauses(audio, sr, inside)  # the commas and full stops inside a piece that was spoken in one go
+                    parts.append(resample(stretch(audio, speed), sr, req.sample_rate))
+                    parts.append(silence(pause, req.sample_rate))  # the pause after the piece: longer for a full stop than for a comma
         except ValueError as exc:
             raise HTTPException(400, str(exc))
         wav = to_wav_bytes(np.concatenate(parts[:-1]), req.sample_rate)  # drop trailing pause
         seconds = sum(len(p) for p in parts) / req.sample_rate
         elapsed_ms = int((time.perf_counter() - started) * 1000)
-        log.info("tts %s/%s %d chunk(s) %.1fs audio in %d ms", req.language, speaker, len(chunks), seconds, elapsed_ms)
+        log.info("tts %s/%s %d chunk(s) %.1fs audio in %d ms", req.language, speaker, len(plan), seconds, elapsed_ms)
         return Response(wav, media_type="audio/wav",
                         headers={"X-Audio-Seconds": f"{seconds:.2f}", "X-Synth-Ms": str(elapsed_ms)})
 

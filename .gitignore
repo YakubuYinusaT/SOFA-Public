@@ -10,3 +10,6 @@ recordings/
 asr_gate_*.json
 gpu_smoke_out/
 deliverables/
+
+# voice samples made for listening tests
+voice_samples/

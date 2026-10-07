@@ -35,3 +35,29 @@ def to_wav_bytes(x: np.ndarray, sample_rate: int) -> bytes:
 
 def silence(seconds: float, sample_rate: int) -> np.ndarray:
     return np.zeros(int(seconds * sample_rate), dtype=np.float32)
+
+
+def insert_pauses(x: np.ndarray, sr: int, marks: list[tuple[float, float]]) -> np.ndarray:
+    """Put silence into a clip at the marks inside it: (how far through the clip, seconds of silence). The position is only an estimate,
+    so the quietest 20 ms frame within a quarter of a second of it is used, which makes the join smooth."""
+    if not marks or len(x) < sr // 2:
+        return x
+    win = max(1, int(0.02 * sr))
+    n = len(x) // win
+    rms = np.array([np.sqrt(np.mean(x[i * win:(i + 1) * win].astype(np.float64) ** 2)) for i in range(n)])
+    reach = max(1, int(0.25 * sr / win))
+    cuts = []
+    for fraction, seconds in marks:
+        centre = int(round(fraction * n))
+        lo, hi = max(1, centre - reach), min(n - 1, centre + reach + 1)
+        if hi > lo:
+            cuts.append((lo + int(np.argmin(rms[lo:hi])), seconds))
+    pieces, previous = [], 0
+    for frame, seconds in sorted(cuts):
+        position = frame * win
+        if position <= previous:
+            continue
+        pieces += [x[previous:position], np.zeros(int(seconds * sr), dtype=x.dtype)]
+        previous = position
+    pieces.append(x[previous:])
+    return np.concatenate(pieces)

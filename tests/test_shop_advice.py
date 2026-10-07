@@ -35,6 +35,13 @@ def test_saying_no_to_the_offer_carries_on(call, advised):
     assert "No problem" in replies[2]
 
 
+def test_ordering_something_else_after_the_advice_is_a_new_order_not_a_no(call, advised):
+    """Found on the real model: a caller who ignored the offer and said "I want two cartons of Indomie" was told "No problem" and lost the order."""
+    replies = call(["When should I apply urea on my maize?", "I want two cartons of Indomie Super Pack"])
+    assert "No problem" not in replies[2]
+    assert "Indomie" in replies[2]
+
+
 def test_a_question_with_no_written_advice_is_passed_to_the_team_not_answered(call, db, advised):
     replies = call(["How should I use a sprayer on my cassava?"])
     assert "I do not have a recommendation for that" in replies[1]
