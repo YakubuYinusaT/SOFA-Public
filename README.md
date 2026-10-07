@@ -74,6 +74,9 @@ that has no translation is spoken in English. More languages are added by listin
 5. **Google search**: `GOOGLE_API_KEY` and `GOOGLE_CSE_ID`.
 6. `python -m scripts.warm_cache` pre-generates the audio for fixed phrases.
 
+To put the whole backend on a fresh Ubuntu 24.04 server with automatic HTTPS, run `deploy/setup_server.sh`
+as root (`update` pulls the latest code and restarts).
+
 The language model can also be served by a hosted OpenAI-style API: set `LLM_PROVIDER=openai`,
 `LLM_URL`, `LLM_MODEL` and `LLM_API_KEY`.
 
