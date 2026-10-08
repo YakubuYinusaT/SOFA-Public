@@ -13,3 +13,8 @@ deliverables/
 
 # voice samples made for listening tests
 voice_samples/
+
+# saved test calls and voice-check clips, kept for later review
+review_runs/
+voice_check_*/
+spitch_*.wav

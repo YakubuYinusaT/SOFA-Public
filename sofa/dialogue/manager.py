@@ -140,6 +140,10 @@ class DialogueManager:
         if not transcript.strip():
             return await self.not_heard(transcript)
 
+        out = await self.plain_answer(transcript)
+        if out:  # a plain yes, no or "that is all" needs no model (the real model misread both as unknown)
+            st["history"] = (st["history"] + [[transcript, out.text]])[-2:]
+            return out
         self.tj, self.raw_json = await self.llm.parse_turn(self.build_prompt(), transcript, alternatives)
         tj = self.tj
         # Mixed-language speech scores low on any single-language model even when it was heard perfectly, so low speech
@@ -155,6 +159,24 @@ class DialogueManager:
         out = await self.dispatch(intent, tj, transcript)
         st["history"] = (st["history"] + [[transcript, out.text]])[-2:]
         return out
+
+    async def plain_answer(self, transcript: str) -> Outcome | None:
+        """Answers that are only a yes, a no, or "that is all", given to the question just asked. Anything more is left to the model."""
+        from ..gateway.answers import FAREWELLS, closing, quick_answer
+        st = self.st
+        if st["owner"] or st["pending"]:
+            return None
+        if st["stage"] == "ordering" and self._has_draft():
+            if closing(transcript, True) and not any(w in FAREWELLS for w in clean(transcript).split()):
+                self.tj, self.raw_json = TurnJSON(intent="deny"), {"intent": "deny", "source": "plain_answer"}
+                return self.checkout()
+        elif st["stage"] == "await_confirm":
+            answer = quick_answer(transcript)
+            if answer:
+                intent = "confirm" if answer == "yes" else "deny"
+                self.tj, self.raw_json = TurnJSON(intent=intent), {"intent": intent, "source": "plain_answer"}
+                return await self.on_confirm() if answer == "yes" else self.on_deny()
+        return None
 
     async def on_silence(self) -> Outcome:
         self.st["silence"] += 1

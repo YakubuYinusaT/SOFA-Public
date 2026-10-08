@@ -77,3 +77,31 @@ def test_the_agriculture_seed_has_stock_prices_and_advice_that_all_point_at_real
         assert advice.find(db, m.id, ["How much fertilizer should I apply on my maize farm per acre"])[0].topic == "Fertilizer for maize"
         assert advice.find(db, m.id, ["I see armyworm on my maize leaves what can I spray"])[0].topic == "Fall armyworm in maize"
         assert advice.find(db, m.id, ["what is the weather like"])[0] is None
+
+
+def test_that_is_all_after_anything_else_goes_to_the_read_back_without_asking_the_model(call, app, monkeypatch):
+    """Found on the real model: "that is all" was read as unknown and the caller was asked to repeat it."""
+    llm = app.state.svc.llm
+    real, asked = llm.parse_turn, []
+
+    async def parse_turn(prompt, transcript, alternatives=None):
+        asked.append(transcript)
+        return await real(prompt, transcript, alternatives)
+
+    monkeypatch.setattr(llm, "parse_turn", parse_turn)
+    replies = call(["I want two cartons of Indomie Super Pack", "that is all"])
+    assert "deliver" in replies[2].lower() or "address" in replies[2].lower()
+    assert asked == ["I want two cartons of Indomie Super Pack"]
+
+
+def test_a_plain_yes_to_the_read_back_places_the_order_without_asking_the_model(call, app, monkeypatch):
+    llm = app.state.svc.llm
+    real, asked = llm.parse_turn, []
+
+    async def parse_turn(prompt, transcript, alternatives=None):
+        asked.append(transcript)
+        return await real(prompt, transcript, alternatives)
+
+    monkeypatch.setattr(llm, "parse_turn", parse_turn)
+    replies = call(["I want two cartons of Indomie Super Pack", "that is all", "12 Allen Avenue Ikeja", "yes"])
+    assert "Done" in replies[4] and "yes" not in asked and "that is all" not in asked

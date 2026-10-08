@@ -4,6 +4,8 @@ import logging
 
 import httpx
 
+from .http import tls_context
+
 log = logging.getLogger("sofa.paystack")
 
 MOCK_WEBHOOK_SECRET = "dev-paystack-secret"
@@ -33,7 +35,7 @@ class PaystackClient:
             return {"account_number": digits, "bank_name": "Test Bank (mock)", "customer_code": f"CUS_mock_{digits}"}
         headers = {"Authorization": f"Bearer {self.s.paystack_secret_key}"}
         email = f"{phone.lstrip('+')}@customers.sofa.ciit.africa"  # never mailed
-        async with httpx.AsyncClient(base_url="https://api.paystack.co", headers=headers, timeout=20) as http:
+        async with httpx.AsyncClient(base_url="https://api.paystack.co", headers=headers, timeout=20, verify=tls_context()) as http:
             cust = await http.post("/customer", json={"email": email, "first_name": name or "Customer", "phone": phone})
             cust.raise_for_status()
             code = cust.json()["data"]["customer_code"]

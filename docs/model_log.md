@@ -14,7 +14,7 @@ The models: **N-ATLaS** (language understanding and wording), **N-ATLaS Whisper*
 | 1.4 | Model-written reply wording is checked before it is spoken (every placeholder kept, no invented number). | None. | The check refused one English wording in the test and the fixed template was spoken instead, as designed. Yoruba and mixed wording passed. |
 | 1.5 | Delay per turn on the L4: understanding about 2.4 s, wording about 1.2 s, against a budget of 1 s each. | Open: a faster card for the language model (the 4090 measured 0.85 s), or a smaller output format. | Not yet changed. |
 | 1.6 | A whole English call on the real model, from the greeting to the placed order, broke after the advice answer: the caller's next line "I want two bags of NPK fertilizer" was treated as a "no" to the product offer, so the order was lost. The earlier stand-in model never produced this. | The shop dialogue now treats a fresh order (place or modify, with items) as a new request, not a refusal (`advice_offer` in `resolve_pending`). A test fails without the fix and passes with it. | The same call now runs end to end: name, price, advice, order, address, read-back, confirmation, and the account number sent by SMS. |
-| 1.7 | In the same call the real model reads "that is all" (after "Anything else?") as unknown, and SOFA asks the caller to repeat. The call still completes because the caller then gives the address. | Open, with 1.3: the compact shop format and examples for ending a list. | Not yet changed. |
+| 1.7 | In the same call the real model reads "that is all" (after "Anything else?") as unknown, and on a later run it also missed a plain "yes" to the read-back, so the order was not placed. | A plain yes, no or "that is all" given to the question just asked is now decided by SOFA itself, before the model is asked (`plain_answer`). Covered by tests that fail if the model is asked. | "That is all" goes straight to "Where should we deliver?", and "yes" places the order. One model call saved on each. |
 
 ## 2. Speech output (YarnGPT2)
 
@@ -29,6 +29,11 @@ The models: **N-ATLaS** (language understanding and wording), **N-ATLaS Whisper*
 | 2.4b | Does full quality help (16 kHz, no stretch), or longer wording? | Both tried. | Longer wording alone: 28%. Full quality alone: 29%. Neither fixes it, so the weakness is in the voice model on short sentences and on onsets. Saying the phrase twice and keeping the second copy did not help either. |
 | 2.4c | The connection to the GPU host: Python's default TLS 1.3 failed 7 of 8 times through the host's proxy on the test laptop; TLS 1.2 worked 8 of 8. | SOFA's own clients already use TLS 1.2 with retries (`sofa/clients/http.py`); the check script now does too. | Stable. |
 | 2.5 | Replies wait for the voice: with the real model a spoken reply needs about 40 s from the end of the caller's turn, and SOFA plays 4 to 5 holding messages meanwhile. | Holding messages, call-back and a call time limit exist. The voice speed-up in 2.1 shortens the wait. | To be re-measured end to end with the full stack. |
+
+| 2.6 | The voice was changed to `jude` with punctuation pauses (the model drops commas and full stops, so SOFA splits the text and inserts quiet gaps itself). | Same 16-phrase read-back check, speed 0.92. | 31% of words over 16 phrases (22% with the old default voice). Long wordings read back at 58% to 59%; one- and two-word replies are still 0% to 40%. Punctuation now gives real pauses, but the clarity limit of this voice model remains. |
+| 2.7 | A setting now chooses the voice provider: `TTS_PROVIDER=yarngpt` (the GPU host), `elevenlabs`, `azure` (Nigerian English voices) or `spitch` (English, Yoruba, Hausa and Igbo voices; chosen as the provider to try first), for the languages in `TTS_PROVIDER_LANGUAGES` (default English). Other languages keep the GPU voice, and the audio cache is keyed by voice so old audio is never replayed. | Covered by `tests/test_tts_providers.py`. | The same read-back check can score any provider, so the choice is made on numbers. |
+| 2.8 | The same 16-phrase read-back check with Spitch (voice `jude`, English). Its audio is a streamed WAV with an unknown length and an extra chunk, so SOFA rewrites the header (`_repair_wav`). | `TTS_PROVIDER=spitch`, checked with `scripts/voice_check.py --hosted`. | 96% of words came back (31% with YarnGPT, 22% with its old default voice). Every one- and two-word reply ("Yes.", "Okay.", "Done.", "Thank you.", "Where should we deliver?") came back at 100%. The lowest were the long order read-back with numbers (78%) and "Okay. Where should we deliver the order to?" (75%). Phrases take 0.5 s to 8 s of audio, 24 kHz. |
+| 2.9 | Long replies lost words: with a statement and a question in one clip, the closing "Anything else?" went unspoken, and a recording played back differently each time (the opening "Done." was heard on some plays and not others). The saved file was identical on every fetch, so the difference came from the player: a speaker that wakes up when playback starts swallows the first moments of a clip. | Hosted voices now make every sentence as its own clip and join them with 0.3 s of quiet (`split_sentences`, `join_wavs`), with 0.25 s of quiet before the first word. Spitch's limit of 3 calls at once is respected, with one retry after a 429. | The reply to the order read-back came back at 89% (78% before) and the closing message at 100% (95% before), with "Anything else?" and "Thank you, Bola." heard. Each clip starts its sound at 0.26 s. |
 
 ## 3. Speech recognition (N-ATLaS Whisper)
 
@@ -53,12 +58,12 @@ The models: **N-ATLaS** (language understanding and wording), **N-ATLaS Whisper*
 
 ## 6. Tools added for measurement
 
-`scripts/gpu_smoke.py` (checks every service through SOFA's own clients), `gpu/bench_tts.py` (voice speed), `scripts/voice_check.py` (the recogniser reads back what the voice said), `scripts/simulate_call.py` (a whole call, now following the holding messages until the real answer arrives).
+`scripts/gpu_smoke.py` (checks every service through SOFA's own clients), `gpu/bench_tts.py` (voice speed), `scripts/voice_check.py` (the recogniser reads back what the voice said), `scripts/simulate_call.py` (a whole call, now following the holding messages until the real answer arrives), `scripts/review_runs.py` (opens each saved run of the test call in its own dashboard, to listen and compare voices).
 
 ## Open improvements, in order of value
 
-1. Shop understanding: move to the compact format (1.3).
-2. Short replies: lengthen or stretch (2.4) and confirm with `scripts/voice_check.py`.
+1. Shop understanding: move to the compact format (1.3). Plain yes, no and "that is all" are already handled without the model (1.7).
+2. Short replies: solved by the Spitch voice (2.8); keep YarnGPT as the fallback voice for languages Spitch does not cover.
 3. Yoruba reply wording (4.1).
 4. Voice speed beyond real time: serve the voice model through vLLM, and start playing the first sentence while the rest is made.
 5. Recorded fixed phrases (greeting, holding messages, goodbyes) in the chosen voice, so they play at once.

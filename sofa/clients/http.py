@@ -41,10 +41,10 @@ def http_for(url: str, api_key: str = "") -> tuple[httpx.AsyncClient, str]:
         client = httpx.AsyncClient(transport=httpx.ASGITransport(app=mock_app), timeout=30)
         return client, "http://mock"
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
-    return RetryingClient(timeout=30, headers=headers, verify=_tls_context()), url.rstrip("/")
+    return RetryingClient(timeout=30, headers=headers, verify=tls_context()), url.rstrip("/")
 
 
-def _tls_context() -> ssl.SSLContext:
+def tls_context() -> ssl.SSLContext:
     """Connections to the GPU host use TLS 1.2 at most. On the first real GPU run, requests over TLS 1.3 from this Python (3.13,
     OpenSSL 3.0.15) through RunPod's proxy failed with 'bad record mac' in 6 to 23 of 25 tries, and with TLS 1.2 in none of 25.
     TLS 1.2 is fully supported by the proxy and just as secure. Set GPU_TLS12=0 to allow TLS 1.3 again."""
@@ -52,3 +52,6 @@ def _tls_context() -> ssl.SSLContext:
     if os.environ.get("GPU_TLS12", "1") != "0":
         ctx.maximum_version = ssl.TLSVersion.TLSv1_2
     return ctx
+
+
+_tls_context = tls_context

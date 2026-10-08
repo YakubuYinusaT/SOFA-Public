@@ -54,15 +54,19 @@ class AudioService:
 
     def __init__(self, settings, tts):
         self.s, self.tts = settings, tts
+        AudioService.voice_tag = getattr(tts, "tag", "")
         self.out_dir = Path(settings.storage_dir) / "audio_out"
         self.in_dir = Path(settings.storage_dir) / "audio_in"
         self.out_dir.mkdir(parents=True, exist_ok=True)
         self.in_dir.mkdir(parents=True, exist_ok=True)
         self._locks: dict[str, asyncio.Lock] = {}
 
-    @staticmethod
-    def key(text: str, lang: str) -> str:
-        return hashlib.sha256(f"{lang}|{text}".encode()).hexdigest()[:24]
+    voice_tag = ""  # set when a hosted voice is chosen, so audio made by another voice is not reused
+
+    @classmethod
+    def key(cls, text: str, lang: str) -> str:
+        salt = f"{cls.voice_tag}|" if cls.voice_tag else ""
+        return hashlib.sha256(f"{salt}{lang}|{text}".encode()).hexdigest()[:24]
 
     def url_for_key(self, key: str) -> str:
         return f"{self.s.public_base_url.rstrip('/')}/audio/{key}.wav"

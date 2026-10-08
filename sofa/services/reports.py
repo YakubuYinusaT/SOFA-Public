@@ -24,6 +24,8 @@ LAGOS = timedelta(hours=1)  # Africa/Lagos is UTC+1 all year
 
 def to_lagos(now: datetime) -> datetime:
     """Lagos wall-clock time as a naive datetime."""
+    if now.tzinfo is None:  # SQLite hands back stored UTC times without a zone; astimezone() would read them as this machine's local time
+        now = now.replace(tzinfo=timezone.utc)
     return (now.astimezone(timezone.utc) + LAGOS).replace(tzinfo=None)
 
 

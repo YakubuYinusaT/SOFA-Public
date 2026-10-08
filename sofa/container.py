@@ -6,7 +6,7 @@ from .clients.llm import LLMClient
 from .clients.paystack import PaystackClient
 from .clients.search import build_search
 from .clients.sms import SMSClient
-from .clients.tts import TTSClient
+from .clients.tts import build_tts
 from .clients.voice import VoiceClient
 from .config import Settings
 from .gateway.bankauth import MockBankAuth
@@ -23,7 +23,7 @@ class Services:
     sessions: object
     asr: ASRClient
     llm: LLMClient
-    tts: TTSClient
+    tts: object
     sms: SMSClient
     paystack: PaystackClient
     voice: VoiceClient
@@ -36,7 +36,7 @@ class Services:
 
 
 def build_services(settings: Settings, session_factory) -> Services:
-    tts = TTSClient(settings.tts_url, settings.gpu_api_key)
+    tts = build_tts(settings)
     sms = SMSClient(settings)
     gateway = build_gateway(settings)
     gateway.policy = VerificationPolicy(settings)

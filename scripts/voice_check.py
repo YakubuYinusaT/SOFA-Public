@@ -1,6 +1,6 @@
 """Does the voice say what it was asked to say? The voice speaks each phrase, the speech recogniser writes down what it heard, and the two are compared.
 
-    TTS_URL=https://HOST:9002 ASR_URL=https://HOST:9001 GPU_API_KEY=... python -m scripts.voice_check [--speaker idera] [--speed 0.92] [--out voice_check_out]
+    TTS_URL=https://HOST:9002 ASR_URL=https://HOST:9001 GPU_API_KEY=... python -m scripts.voice_check [--speaker idera] [--speed 0.92] [--out voice_check_out] [--hosted]
 
 A phrase the recogniser cannot read back is a phrase a caller will struggle to hear. Short phrases are the usual trouble: the voice model squeezes them.
 Numbers are compared by their non-number words only, since the recogniser may write them as digits or as words.
@@ -97,8 +97,13 @@ async def main() -> None:
     ap.add_argument("--rate", type=int, default=8000, choices=(8000, 16000, 24000), help="sample rate asked of the voice (8000 is phone quality)")
     ap.add_argument("--only", help="check only phrases containing this text")
     ap.add_argument("--phrase", action="append", help="check this wording instead of the built-in list (repeat for several)")
+    ap.add_argument("--hosted", action="store_true", help="score the voice chosen by TTS_PROVIDER in .env (ElevenLabs, Azure or Spitch) instead of the GPU host's voice")
     args = ap.parse_args()
     s = get_settings()
+    hosted = None
+    if args.hosted:
+        from sofa.clients.tts import build_tts
+        hosted = build_tts(s)
     asr = ASRClient(s.asr_url, s.gpu_api_key)
     out = Path(args.out)
     out.mkdir(exist_ok=True)
@@ -106,7 +111,14 @@ async def main() -> None:
     for i, phrase in enumerate(args.phrase or PHRASES):
         if args.only and args.only.lower() not in phrase.lower():
             continue
-        wav = speak(s.tts_url, s.gpu_api_key, phrase, args.speaker, args.speed, args.rate)
+        if hosted:
+            try:
+                wav = await hosted.synthesize(phrase, "en")
+            except Exception as exc:
+                print(f"?  {phrase!r}: the hosted voice failed ({type(exc).__name__})")
+                continue
+        else:
+            wav = speak(s.tts_url, s.gpu_api_key, phrase, args.speaker, args.speed, args.rate)
         if wav is None:
             print(f"?  {phrase!r}: the voice did not answer")
             continue

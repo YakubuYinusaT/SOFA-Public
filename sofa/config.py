@@ -33,6 +33,20 @@ class Settings(BaseSettings):
     llm_provider: str = "vllm"
     llm_api_key: str = ""  # the hosted provider's key; with "vllm" the GPU key (GPU_API_KEY) is used
     llm_structured_mode: str = "modern"  # "legacy" only for vLLM older than 0.12
+    tts_provider: str = "yarngpt"  # yarngpt (the GPU host), elevenlabs, azure or spitch
+    tts_provider_languages: str = ""  # languages spoken by the hosted voice (the others keep the GPU host's voice); empty = English, or every Spitch language
+    tts_hosted_speed: float = 0.95
+    spitch_api_key: str = ""
+    spitch_voice_en: str = "jude"
+    spitch_voice_yo: str = "sade"
+    spitch_voice_ha: str = "amina"
+    spitch_voice_ig: str = "ngozi"
+    elevenlabs_api_key: str = ""
+    elevenlabs_voice_id: str = ""
+    elevenlabs_model: str = "eleven_multilingual_v2"
+    azure_speech_key: str = ""
+    azure_speech_region: str = ""
+    azure_voice_en: str = "en-NG-EzinneNeural"
     gpu_api_key: str = ""  # Bearer token for the GPU host (ASR, LLM, TTS); required when it is public
     hf_token: str = ""
 
