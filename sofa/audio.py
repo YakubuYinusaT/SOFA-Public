@@ -63,6 +63,26 @@ async def fetch_recording(url: str, attempts: int = 6, wait: float = 0.6, http: 
             await http.aclose()
 
 
+def wav_rms(wav: bytes) -> float:
+    """How loud a 16-bit mono WAV is (root mean square, 0 to 32767). Plain Python, no numpy: a phone turn is a few hundred thousand samples."""
+    import io
+    import wave
+    from array import array
+    if wav.startswith((b"MOCK[", b"MOCKX:")):
+        return 10_000.0  # the simulator's stand-in recordings are not audio
+    try:
+        with wave.open(io.BytesIO(wav)) as w:
+            if w.getsampwidth() != 2:
+                return 10_000.0
+            samples = array("h")
+            samples.frombytes(w.readframes(w.getnframes()))
+    except (wave.Error, EOFError):
+        return 10_000.0
+    if not samples:
+        return 0.0
+    return (sum(s * s for s in samples) / len(samples)) ** 0.5
+
+
 def to_16k_mono(raw: bytes) -> bytes:
     """Resample phone audio (8 kHz) to the 16 kHz mono the N-ATLAS ASR models expect.
     Resampling cannot restore lost frequencies: measure accuracy on real calls (scripts/asr_gate.py)."""

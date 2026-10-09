@@ -160,12 +160,30 @@ class DialogueManager:
         st["history"] = (st["history"] + [[transcript, out.text]])[-2:]
         return out
 
+    CATALOG_ASK = re.compile(r"\b(what (do|can) (you|i) (have|sell|stock|buy|get|order)|what('s| is| are)? (available|in (the |your )?(store|shop))|what products|what items|"
+                             r"(show|tell) me (what|your) (you have|products|items|stock)|what (are )?(you|your) (selling|products|stock))\b")
+    SHOPPING_START = re.compile(r"^(i need|i want|i would like|i'd like|i am looking for|looking for|do you (have|sell|stock)|have you got|get me|give me|i wan buy|i dey find)\b")
+
+    def catalog_answer(self, transcript: str) -> Outcome | None:
+        """"What do you have in the store?" is a question about the whole catalogue. It was being searched for as a product called that."""
+        if not self.CATALOG_ASK.search(clean(transcript)):
+            return None
+        shown = [p.name for p in self._all_products() if p.stock_qty > 0][:5] or [p.name for p in self._all_products()][:5]
+        if not shown:
+            return None
+        self.tj, self.raw_json = TurnJSON(intent="check_availability"), {"intent": "check_availability", "source": "plain_answer", "catalog": shown}
+        return self.reply("catalog_list", products=templates.join_list(shown, self.L("catalog_list")), action="catalog_list")
+
     async def plain_answer(self, transcript: str) -> Outcome | None:
         """Answers that are only a yes, a no, or "that is all", given to the question just asked. Anything more is left to the model."""
         from ..gateway.answers import FAREWELLS, closing, quick_answer
         st = self.st
         if st["owner"] or st["pending"]:
             return None
+        if st["stage"] in (None, "ordering"):
+            listed = self.catalog_answer(transcript)
+            if listed:
+                return listed
         if st["stage"] == "ordering" and self._has_draft():
             if closing(transcript, True) and not any(w in FAREWELLS for w in clean(transcript).split()):
                 self.tj, self.raw_json = TurnJSON(intent="deny"), {"intent": "deny", "source": "plain_answer"}
@@ -502,6 +520,9 @@ class DialogueManager:
         entry, matched = advice_svc.find(self.db, self.merchant.id, [transcript])
         self.match_log.append({"spoken": transcript, "step": "advice", "advice": entry.topic if entry else None, "matched_words": matched})
         if not entry:
+            wish = self.SHOPPING_START.sub("", clean(transcript)).strip()
+            if wish and self.SHOPPING_START.match(clean(transcript)):  # "I need a fertilizer" is a request to buy, not a question about how to use something
+                return await self.info_turn("check_availability", TurnJSON(intent="check_availability", items=[Item(spoken_name=wish)]))
             await open_handoff(self.db, self.svc, self.call, "advice_question", f"Caller asked for advice: {transcript}"[:400])
             return self.reply("advice_none", action="advice_none")
         if entry.product_name:

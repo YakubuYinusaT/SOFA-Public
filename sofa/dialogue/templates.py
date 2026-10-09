@@ -211,6 +211,7 @@ EN: dict[str, list[str]] = {
     "clarify_unit_many": ["{ack}. Which one: {units}?"],
     "clarify_quantity": ["How many would you like?"],
     "not_available": ["Sorry, we don't have {spoken}. Anything else?"],
+    "catalog_list": ["We have {products}. Which one would you like?"],
     "not_available_alt": ["Sorry, we don't have {spoken}. Would you like {alt_product} at {alt_price}?"],
     "out_of_stock": ["Sorry, {product} is out of stock right now. Anything else?"],
     "out_of_stock_alt": ["Sorry, {product} is out of stock. Would you like {alt_product} at {alt_price}?"],
@@ -425,6 +426,7 @@ CONTEXT: dict[str, str] = {
     "clarify_unit_many": "Same as above but with three or more choices.",
     "clarify_quantity": "Caller did not say how many.",
     "not_available": "The shop does not sell what the caller asked for.",
+    "catalog_list": "The caller asked what the shop sells. Sofa names a few of the products it has and asks which one the caller would like.",
     "not_available_alt": "The shop does not sell that, but offers a similar product with its price.",
     "out_of_stock": "The item exists but is out of stock.",
     "out_of_stock_alt": "Out of stock, and offers the closest alternative with its price.",
@@ -485,6 +487,7 @@ NOT_TRANSLATED = {"no_service"}  # spoken in English by design
 # What each {placeholder} contains, so translators know what will be filled in.
 PLACEHOLDER_HELP: dict[str, str] = {
     "languages": "the languages on offer, for example English or Yoruba (each name comes from the lang_name_* phrases)",
+    "products": "a few product names joined with the word for 'and', for example Urea Fertilizer, NPK 15-15-15 Fertilizer and Hybrid Maize Seed. Keep each name as it is",
     "name": "the customer's first name, for example Musa",
     "answer": "the answer to a general question, already written in English from a web search, for example The capital of Ghana is Accra. Keep it as it is",
     "who": "a person's name as saved by the bank, for example Hauwa Bello",

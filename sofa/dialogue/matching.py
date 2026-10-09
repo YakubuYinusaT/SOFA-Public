@@ -40,13 +40,16 @@ def _phrases(p: Product) -> list[str]:
     return [p.name, *(a.phrase for a in p.aliases)]
 
 
-def _exact_alias(products: list[Product], phrase: str) -> Product | None:
+def _exact_alias(products: list[Product], phrase: str, spoken_clean: str = "") -> Product | None:
+    """The spoken phrase is compared as spoken ("can fertilizer") and with filler words removed ("fertilizer"), each against the catalogue's own words
+    kept whole. Removing "can" from a product called "CAN Fertilizer" made it the same as the plain word "fertilizer", so every "fertilizer" matched it."""
+    wanted = {phrase, spoken_clean} - {""}
     hits: list[tuple[int, int, Product]] = []
     for p in products:
         for a in p.aliases:
-            if normalize_phrase(a.phrase) == phrase:
+            if clean(a.phrase) in wanted:
                 hits.append((SOURCE_RANK.get(a.source, 0), a.confirmations, p))
-        if normalize_phrase(p.name) == phrase:
+        if clean(p.name) in wanted:
             hits.append((0, 0, p))
     if not hits:
         return None
@@ -67,10 +70,10 @@ async def match_product(
 ) -> MatchResult:
     products = active_products(db, merchant_id)
     phrase = normalize_phrase(spoken)
-    if not phrase:
+    if not phrase and not clean(spoken):
         return MatchResult("none", step="empty")
 
-    exact = _exact_alias(products, phrase)
+    exact = _exact_alias(products, phrase, clean(spoken))
     if exact:
         return MatchResult("match", exact, [(exact, 1.0)], "exact_alias")
 

@@ -17,7 +17,7 @@ from fastapi.responses import Response
 from sqlalchemy import func, select
 
 from .. import voicexml
-from ..audio import fetch_recording, to_16k_mono
+from ..audio import wav_rms, fetch_recording, to_16k_mono
 from ..dialogue.manager import DialogueManager, Outcome, daypart, greeting_key, new_state
 from ..dialogue import language
 from ..gateway import links
@@ -466,84 +466,91 @@ async def _process_turn(svc, session_id: str, recording_url: str | None, secret:
                 audio = to_16k_mono(raw)
                 lat["audio_fetch"] = int((time.perf_counter() - t) * 1000)
 
-                t = time.perf_counter()
-                asked_now, alts, how = False, [], "known"
-                enabled = svc.settings.languages
-                dual = svc.settings.dual_asr and len(enabled) > 1
-                # Code-mixing: people switch languages inside one sentence, so with dual_asr every enabled model hears every
-                # turn. One reading becomes the transcript; the other is kept as a second opinion for the LLM and the logs.
-                if dual or not st["lang_locked"]:
-                    results = await asyncio.gather(*[svc.asr.transcribe(audio, l) for l in enabled])
+                rms = wav_rms(audio)
+                quiet = rms < svc.settings.silence_rms
+                lat["rms"] = int(rms)
+                if quiet:  # nobody spoke: a quiet line makes the recogniser invent a sentence, so it is treated as silence
+                    outcome = await mgr.on_silence()
+                    transcript, conf = "", None
                 else:
-                    results = [await svc.asr.transcribe(audio, lang)]
-                top = max(results, key=lambda r: r.confidence)
-
-                if not st["lang_locked"]:
-                    # No menu. The most confident model sets the language. If none is confident Sofa asks out loud which
-                    # language the caller wants, and understands the spoken answer.
-                    answer = language.spoken_choice([r.text for r in results], enabled) if st.get("asked_language") else None
-                    if answer:  # "Yoruba", "English please": the caller named it
-                        chosen, how = answer, "answered"
-                    elif top.confidence >= svc.settings.asr_min_confidence:  # they just carried on in their language
-                        chosen, how = top.language, "detected"
-                    elif st.get("language_asks", 0) < language.MAX_ASKS:
-                        # Low confidence is normal for mixed speech. Only interrupt with a question if we cannot find a
-                        # request in what was said.
-                        others = [r.text for r in results if r is not top]
-                        if await mgr.understands(top.text, others):
-                            chosen, how = top.language, "detected"
-                        else:
-                            chosen, how = None, "ask"
-                    else:  # asked twice, still unclear: carry on in English rather than loop
-                        chosen, how = "en", "default"
-                    if chosen:
-                        st["lang"], st["lang_locked"] = chosen, True
-                        lang = chosen
-                        if how != "default":  # a guessed default is not worth remembering for next time
-                            customer.language = call.language = chosen
-                        best = next(r for r in results if r.language == chosen)
-                        alts = [r for r in results if r is not best]
+                    t = time.perf_counter()
+                    asked_now, alts, how = False, [], "known"
+                    enabled = svc.settings.languages
+                    dual = svc.settings.dual_asr and len(enabled) > 1
+                    # Code-mixing: people switch languages inside one sentence, so with dual_asr every enabled model hears every
+                    # turn. One reading becomes the transcript; the other is kept as a second opinion for the LLM and the logs.
+                    if dual or not st["lang_locked"]:
+                        results = await asyncio.gather(*[svc.asr.transcribe(audio, l) for l in enabled])
                     else:
-                        best, asked_now = top, True
-                else:
-                    mine = next((r for r in results if r.language == lang), results[0])
-                    # The session-language model is the default reading; another one takes over only if clearly better.
-                    best = top if top is not mine and top.confidence - mine.confidence >= svc.settings.primary_margin else mine
-                    alts = [r for r in results if r is not best]
-                    if dual:
-                        # The reply language follows the caller, without flip-flopping on one English word: a clearly better
-                        # OTHER model two turns running, or the caller asking for a language by name.
-                        leader = top.language if top.confidence - mine.confidence >= svc.settings.language_switch_margin else lang
-                        votes = (st.get("votes", []) + [leader])[-2:]
-                        named = language.spoken_choice([r.text for r in results], enabled) if len(best.text.split()) <= 5 else None
-                        new_lang = named if named and named != lang else (votes[0] if len(votes) == 2 and votes[0] == votes[1] != lang else None)
-                        st["votes"] = [] if new_lang else votes
-                        if new_lang:
-                            st["lang"], lang = new_lang, new_lang
-                            customer.language = call.language = new_lang
-                            how = "switched"
-                distinct, seen = [], {clean(best.text)}
-                for r in alts:  # a second reading is only useful when it says something different (ignoring case and punctuation)
-                    key = clean(r.text)
-                    if key and key not in seen:
-                        seen.add(key)
-                        distinct.append(r)
-                alts = distinct
-                lat["asr"] = int((time.perf_counter() - t) * 1000)
-                turn.asr_model, turn.transcript, turn.asr_confidence = best.model, best.text, best.confidence
-                turn.asr_alternatives = [{"language": r.language, "model": r.model, "text": r.text, "confidence": r.confidence} for r in alts] or None
-                transcript, conf = best.text, best.confidence
+                        results = [await svc.asr.transcribe(audio, lang)]
+                    top = max(results, key=lambda r: r.confidence)
 
-                t = time.perf_counter()
-                if asked_now:
-                    st["asked_language"], st["language_asks"] = True, st.get("language_asks", 0) + 1
-                    prompts_ask = language.ask_prompts(svc.settings.languages, st["language_asks"])
-                    outcome = Outcome(prompts_ask[0][0], "language_ask", action="language_ask", lang=prompts_ask[0][1], also=prompts_ask[1:])
-                elif how in ("answered", "default"):  # the answer was about the language, not an order: confirm and ask for it
-                    outcome = mgr.reply("ask_again_language", action=f"language_{how}")
-                else:
-                    outcome = await mgr.handle(best.text, best.confidence, [r.text for r in alts] or None)
-                lat["understand_and_act"] = int((time.perf_counter() - t) * 1000)
+                    if not st["lang_locked"]:
+                        # No menu. The most confident model sets the language. If none is confident Sofa asks out loud which
+                        # language the caller wants, and understands the spoken answer.
+                        answer = language.spoken_choice([r.text for r in results], enabled) if st.get("asked_language") else None
+                        if answer:  # "Yoruba", "English please": the caller named it
+                            chosen, how = answer, "answered"
+                        elif top.confidence >= svc.settings.asr_min_confidence:  # they just carried on in their language
+                            chosen, how = top.language, "detected"
+                        elif st.get("language_asks", 0) < language.MAX_ASKS:
+                            # Low confidence is normal for mixed speech. Only interrupt with a question if we cannot find a
+                            # request in what was said.
+                            others = [r.text for r in results if r is not top]
+                            if await mgr.understands(top.text, others):
+                                chosen, how = top.language, "detected"
+                            else:
+                                chosen, how = None, "ask"
+                        else:  # asked twice, still unclear: carry on in English rather than loop
+                            chosen, how = "en", "default"
+                        if chosen:
+                            st["lang"], st["lang_locked"] = chosen, True
+                            lang = chosen
+                            if how != "default":  # a guessed default is not worth remembering for next time
+                                customer.language = call.language = chosen
+                            best = next(r for r in results if r.language == chosen)
+                            alts = [r for r in results if r is not best]
+                        else:
+                            best, asked_now = top, True
+                    else:
+                        mine = next((r for r in results if r.language == lang), results[0])
+                        # The session-language model is the default reading; another one takes over only if clearly better.
+                        best = top if top is not mine and top.confidence - mine.confidence >= svc.settings.primary_margin else mine
+                        alts = [r for r in results if r is not best]
+                        if dual:
+                            # The reply language follows the caller, without flip-flopping on one English word: a clearly better
+                            # OTHER model two turns running, or the caller asking for a language by name.
+                            leader = top.language if top.confidence - mine.confidence >= svc.settings.language_switch_margin else lang
+                            votes = (st.get("votes", []) + [leader])[-2:]
+                            named = language.spoken_choice([r.text for r in results], enabled) if len(best.text.split()) <= 5 else None
+                            new_lang = named if named and named != lang else (votes[0] if len(votes) == 2 and votes[0] == votes[1] != lang else None)
+                            st["votes"] = [] if new_lang else votes
+                            if new_lang:
+                                st["lang"], lang = new_lang, new_lang
+                                customer.language = call.language = new_lang
+                                how = "switched"
+                    distinct, seen = [], {clean(best.text)}
+                    for r in alts:  # a second reading is only useful when it says something different (ignoring case and punctuation)
+                        key = clean(r.text)
+                        if key and key not in seen:
+                            seen.add(key)
+                            distinct.append(r)
+                    alts = distinct
+                    lat["asr"] = int((time.perf_counter() - t) * 1000)
+                    turn.asr_model, turn.transcript, turn.asr_confidence = best.model, best.text, best.confidence
+                    turn.asr_alternatives = [{"language": r.language, "model": r.model, "text": r.text, "confidence": r.confidence} for r in alts] or None
+                    transcript, conf = best.text, best.confidence
+
+                    t = time.perf_counter()
+                    if asked_now:
+                        st["asked_language"], st["language_asks"] = True, st.get("language_asks", 0) + 1
+                        prompts_ask = language.ask_prompts(svc.settings.languages, st["language_asks"])
+                        outcome = Outcome(prompts_ask[0][0], "language_ask", action="language_ask", lang=prompts_ask[0][1], also=prompts_ask[1:])
+                    elif how in ("answered", "default"):  # the answer was about the language, not an order: confirm and ask for it
+                        outcome = mgr.reply("ask_again_language", action=f"language_{how}")
+                    else:
+                        outcome = await mgr.handle(best.text, best.confidence, [r.text for r in alts] or None)
+                    lat["understand_and_act"] = int((time.perf_counter() - t) * 1000)
             turn.llm_json, turn.match_candidates = mgr.raw_json, mgr.match_log or None
         except Exception as exc:
             log.exception("turn failed")
