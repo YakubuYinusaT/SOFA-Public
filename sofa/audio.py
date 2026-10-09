@@ -25,14 +25,32 @@ def mock_mixed_url(readings: dict) -> str:
     return "mock:" + quote("MOCKX:" + json.dumps({k: list(v) for k, v in readings.items()}), safe="")
 
 
-async def fetch_recording(url: str) -> bytes:
-    """Africa's Talking recording URLs expire, so copy the audio to our own storage per turn."""
+async def fetch_recording(url: str, attempts: int = 6, wait: float = 0.6, http: httpx.AsyncClient | None = None) -> bytes:
+    """Africa's Talking recording URLs expire, so copy the audio to our own storage per turn.
+
+    The address arrives the moment the recording ends, and on a real call the file was not yet on their server ("404 Not Found"). So a missing or
+    busy file is asked for again a few times, a little later each time, before the turn is given up."""
     if url.startswith("mock:"):
         return unquote(url[len("mock:"):]).encode("utf-8")
-    async with httpx.AsyncClient(timeout=15, follow_redirects=True) as http:
-        resp = await http.get(url)
-        resp.raise_for_status()
-        return resp.content
+    own = http is None
+    http = http or httpx.AsyncClient(timeout=15, follow_redirects=True)
+    try:
+        for attempt in range(attempts):
+            try:
+                resp = await http.get(url)
+                if resp.status_code not in (403, 404, 408, 425, 429) and resp.status_code < 500:
+                    resp.raise_for_status()
+                    return resp.content
+                if attempt == attempts - 1:
+                    resp.raise_for_status()
+            except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RemoteProtocolError):
+                if attempt == attempts - 1:
+                    raise
+            await asyncio.sleep(wait * (attempt + 1))
+        raise RuntimeError("unreachable")
+    finally:
+        if own:
+            await http.aclose()
 
 
 def to_16k_mono(raw: bytes) -> bytes:
