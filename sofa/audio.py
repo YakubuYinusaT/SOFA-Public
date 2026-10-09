@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+import re
 import subprocess
 from pathlib import Path
 from urllib.parse import unquote
@@ -34,18 +35,27 @@ async def fetch_recording(url: str, attempts: int = 6, wait: float = 0.6, http: 
         return unquote(url[len("mock:"):]).encode("utf-8")
     own = http is None
     http = http or httpx.AsyncClient(timeout=15, follow_redirects=True)
+    # On the first real call the address Africa's Talking sent ended "...T.mp3" and answered 404, while the same file without the stray "T" answered
+    # 200. So the address as sent is tried first, then that one.
+    plain = re.sub(r"T(\.[A-Za-z0-9]{2,4})$", r"\1", url.split("?")[0])
+    candidates = [url] + ([plain] if plain != url.split("?")[0] else [])
     try:
         for attempt in range(attempts):
-            try:
-                resp = await http.get(url)
+            last = None
+            for candidate in candidates:
+                try:
+                    resp = await http.get(candidate)
+                except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RemoteProtocolError):
+                    last = None
+                    continue
                 if resp.status_code not in (403, 404, 408, 425, 429) and resp.status_code < 500:
                     resp.raise_for_status()
                     return resp.content
-                if attempt == attempts - 1:
-                    resp.raise_for_status()
-            except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RemoteProtocolError):
-                if attempt == attempts - 1:
-                    raise
+                last = resp
+            if attempt == attempts - 1:
+                if last is not None:
+                    last.raise_for_status()
+                raise httpx.ConnectError("the recording could not be reached")
             await asyncio.sleep(wait * (attempt + 1))
         raise RuntimeError("unreachable")
     finally:

@@ -43,3 +43,17 @@ async def test_a_real_error_such_as_a_bad_request_is_not_retried():
     with pytest.raises(httpx.HTTPStatusError):
         await fetch_recording("https://x/y.mp3", wait=0, http=http)
     assert len(seen) == 1
+
+
+@pytest.mark.anyio
+async def test_the_address_without_the_stray_T_is_tried_when_the_one_sent_is_not_found():
+    """The first real call: ...e20aT.mp3 was 404 and ...e20a.mp3 was 200."""
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return httpx.Response(200, content=b"AUDIO") if str(request.url).endswith("e20a.mp3") else httpx.Response(404)
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    assert await fetch_recording("https://gigantic.example.com/bdba7c3cc1ea786e726d936d4e47e20aT.mp3", wait=0, http=http) == b"AUDIO"
+    assert seen[0].endswith("e20aT.mp3") and seen[-1].endswith("e20a.mp3")
