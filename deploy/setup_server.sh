@@ -51,7 +51,7 @@ esac
 echo "1/6 Installing packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq git ffmpeg ufw curl gpg ca-certificates software-properties-common debian-keyring debian-archive-keyring apt-transport-https python3 python3-venv
+apt-get install -y -qq git ffmpeg ufw curl openssl gpg ca-certificates software-properties-common debian-keyring debian-archive-keyring apt-transport-https python3 python3-venv
 
 if ! python_ok python3; then
   echo "  adding a newer Python (3.12) because this system's is too old"
@@ -79,7 +79,7 @@ HOST="${SITE_HOST:-${IP//./-}.sslip.io}"
 
 echo "3/6 Writing the settings (only if they do not exist yet)"
 if [[ ! -f "$SRC/.env" ]]; then
-  rand() { tr -dc 'A-Za-z0-9' </dev/urandom | head -c 20; }
+  rand() { openssl rand -hex 10; }  # not tr | head: with pipefail that pipe ends the script silently (exit 141)
   ADMIN_PW="$(rand)"; VENDOR_PW="$(rand)"
   cat >"$SRC/.env" <<EOF
 SERVICES_ENABLED=commerce,lookup
