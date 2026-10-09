@@ -25,7 +25,7 @@ python_ok python3 || PY=python3.12
 
 install_code() {
   if [[ -d "$SRC/.git" ]]; then
-    git -C "$SRC" pull --ff-only
+    git -c safe.directory="$SRC" -C "$SRC" pull --ff-only  # the folder belongs to the sofa user, and git refuses root to touch it otherwise
   else
     git clone "$REPO" "$SRC"
   fi
