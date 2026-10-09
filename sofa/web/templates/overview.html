@@ -20,19 +20,22 @@
 {% block body %}
 {% set here = "home" %}{% include "overview_nav.html" %}
 
-{% if s.hub_story_video_url or s.hub_demo_video_url %}
-{{ rule(1, "Watch") }}
+{% set n = namespace(v=1) %}
+{% macro media(m, title, note, button) -%}
+  {% if m.kind == "file" %}<video controls preload="metadata" style="width:100%;border-radius:var(--radius-sm)" aria-label="{{ title }}"><source src="{{ m.src }}"></video>
+  {% elif m.kind == "youtube" %}<iframe src="{{ m.src }}" title="{{ title }}" style="width:100%;aspect-ratio:16/9;border:0;border-radius:var(--radius-sm)" loading="lazy" allow="encrypted-media; picture-in-picture" allowfullscreen></iframe>
+  {% else %}<p class="small">{{ note }}</p><a class="btn" href="{{ m.src }}" rel="noopener">{{ button }}</a>{% endif %}
+{%- endmacro %}
+{% if has_watch %}
+{{ rule(n.v, "Watch and listen") }}{% set n.v = n.v + 1 %}
 <div class="cols two">
-  {% if s.hub_story_video_url %}<section class="card"><p class="eyebrow">The story</p><h3>The problem and what we built</h3>
-    {% if story_kind == "file" %}<video controls preload="metadata" style="width:100%;border-radius:var(--radius-sm)"><source src="{{ s.hub_story_video_url }}"></video>
-    {% else %}<p class="small">A short talk on the problem and how Talk solves it.</p><a class="btn" href="{{ s.hub_story_video_url }}" rel="noopener">Watch the story</a>{% endif %}</section>{% endif %}
-  {% if s.hub_demo_video_url %}<section class="card"><p class="eyebrow">The demo</p><h3>A call, from start to finish</h3>
-    {% if demo_kind == "file" %}<video controls preload="metadata" style="width:100%;border-radius:var(--radius-sm)"><source src="{{ s.hub_demo_video_url }}"></video>
-    {% else %}<p class="small">A real call to Talk, and what the shop owner sees.</p><a class="btn" href="{{ s.hub_demo_video_url }}" rel="noopener">Watch the demo</a>{% endif %}</section>{% endif %}
+  {% if s.hub_story_video_url %}<section class="card"><p class="eyebrow">The story</p><h3>The problem and what we built</h3>{{ media(story, "The story: the problem and what we built", "A short talk on the problem and how Talk solves it.", "Watch the story") }}</section>{% endif %}
+  {% if s.hub_demo_video_url %}<section class="card"><p class="eyebrow">The demo</p><h3>A call, from start to finish</h3>{{ media(demo, "The demo: a call from start to finish", "A real call to Talk, and what the shop owner sees.", "Watch the demo") }}</section>{% endif %}
+  {% if s.hub_audio_url %}<section class="card"><p class="eyebrow">Listen</p><h3>The explainer</h3><p class="small">The problem and the solution, in our own voice.</p><audio controls preload="none" style="width:100%" src="{{ s.hub_audio_url }}"></audio></section>{% endif %}
 </div>
 {% endif %}
 
-{{ rule(2 if (s.hub_story_video_url or s.hub_demo_video_url) else 1, "The problem, and what we built") }}
+{{ rule(n.v, "The problem, and what we built") }}{% set n.v = n.v + 1 %}
 <div class="cols three">
   {{ metric("Mobile lines in Nigeria", "195.1M", "NCC, July 2026") }}
   {{ metric("Of those, on 2G", "1 in 3", "voice works, apps do not") }}
@@ -46,7 +49,7 @@
 </div>
 <p class="caption"><a href="/overview/technology">How it works in detail</a> · <a href="/overview/use-cases">Everything Talk can do</a></p>
 
-{{ rule(3 if (s.hub_story_video_url or s.hub_demo_video_url) else 2, "What we found testing the models") }}
+{{ rule(n.v, "What we found testing the models") }}{% set n.v = n.v + 1 %}
 <div class="cols three">
   <section class="card"><p class="eyebrow">Answers cut off</p><h3>5 of 8 checks, then none</h3><p class="small">The language model was stopping mid-answer. We gave it room to finish, and no answer is cut off now.</p></section>
   <section class="card"><p class="eyebrow">Voice speed</p><h3>2.2 times faster</h3><p class="small">Speech was made at about 35 tokens a second. A fixed-size cache doubled it, so replies reach the caller sooner.</p></section>
@@ -54,7 +57,7 @@
 </div>
 <p class="caption">Every fault we hit, what we changed and the measured effect, are in <a href="/overview/findings">the full record</a>. It also covers Yoruba, which Talk understands end to end.</p>
 
-{{ rule(4 if (s.hub_story_video_url or s.hub_demo_video_url) else 3, "Test it by phone") }}
+{{ rule(n.v, "Test it by phone") }}{% set n.v = n.v + 1 %}
 <section class="card" id="test" aria-labelledby="test-title">
   <h3 id="test-title">Live calls run on our own GPU</h3>
   <p class="small">Talk's speech recogniser and language model are N-ATLaS, and they run on a GPU server of our own. We start it for your session, so a live test begins with a short email.</p>
@@ -67,7 +70,7 @@
   <p class="small">The shop owner's portal, the saved calls and the live demo page are always open and need no GPU.</p>
 </section>
 
-{{ rule(5 if (s.hub_story_video_url or s.hub_demo_video_url) else 4, "Where this goes") }}
+{{ rule(n.v, "Where this goes") }}{% set n.v = n.v + 1 %}
 <section class="card">
   <p class="eyebrow">Your own number becomes your AI agent</p>
   <h3>Call your own number, and your agent answers</h3>
@@ -75,7 +78,7 @@
   {% if s.hub_deck_url %}<a class="btn ghost" href="{{ s.hub_deck_url }}" rel="noopener">See the pitch deck</a>{% endif %}
 </section>
 
-{{ rule(6 if (s.hub_story_video_url or s.hub_demo_video_url) else 5, "Partner with us") }}
+{{ rule(n.v, "Partner with us") }}{% set n.v = n.v + 1 %}
 <div class="cols three" id="partner">
   <section class="card"><p class="eyebrow">Service providers</p><h3>Reach customers who have no app</h3><p class="small">Connect a clinic, a courier, a shop, a farm supplier or a public office once, and callers can reach it by voice. No code changes on our side, and you get a dashboard for calls, orders and daily payouts.</p></section>
   <section class="card"><p class="eyebrow">Banks and payment partners</p><h3>Power wallets and payments</h3><p class="small">Every Talk account comes with a banking wallet from a partner bank, or links the bank a person already uses. Customers pay for any service in the same call.</p></section>

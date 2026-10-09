@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse
 
 from ..web import ui
 from .pages import templates
@@ -38,11 +39,16 @@ def enabled(request: Request) -> None:
         raise HTTPException(404)
 
 
-def video_kind(url: str) -> str:
-    """'file' when the address is a video file the page can play itself, 'link' for anything else (YouTube, Drive...), '' when there is none."""
+def video_embed(url: str) -> dict:
+    """How the page shows a video address: 'file' (a video file it plays itself), 'youtube' (embedded), 'link' (a button to open it) or '' (nothing set)."""
     if not url:
-        return ""
-    return "file" if re.search(r"\.(mp4|webm|mov)(\?.*)?$", url, re.I) else "link"
+        return {"kind": "", "src": ""}
+    if re.search(r"\.(mp4|webm|mov)(\?.*)?$", url, re.I):
+        return {"kind": "file", "src": url}
+    m = re.match(r"https?://(?:www\.|m\.)?(?:youtube\.com/(?:watch\?(?:.*&)?v=|embed/|shorts/)|youtu\.be/)([\w-]{6,20})", url)
+    if m:
+        return {"kind": "youtube", "src": f"https://www.youtube-nocookie.com/embed/{m.group(1)}"}
+    return {"kind": "link", "src": url}
 
 
 def inline(text: str) -> str:
@@ -93,8 +99,8 @@ def markdown_to_html(md: str) -> str:
 def context(request: Request, **extra) -> dict:
     s = request.app.state.svc.settings
     return {"request": request, "brand": "Talk", "footer_kind": "naic", "home_url": "/overview", "active": "", "s": s,
-            "story_kind": video_kind(s.hub_story_video_url), "demo_kind": video_kind(s.hub_demo_video_url),
-            "demo_page": s.demo_page_enabled, **extra}
+            "story": video_embed(s.hub_story_video_url), "demo": video_embed(s.hub_demo_video_url),
+            "has_watch": bool(s.hub_story_video_url or s.hub_demo_video_url or s.hub_audio_url), "demo_page": s.demo_page_enabled, **extra}
 
 
 @router.get("")
@@ -117,3 +123,17 @@ def findings(request: Request, _=Depends(enabled)):
     path = ROOT / "docs" / "model_log.md"
     body = markdown_to_html(path.read_text(encoding="utf-8")) if path.exists() else ""
     return templates.TemplateResponse(request, "overview_findings.html", context(request, body=body))
+
+
+FILE_TYPES = {"pdf": "application/pdf", "mp3": "audio/mpeg", "m4a": "audio/mp4", "wav": "audio/wav", "mp4": "video/mp4", "webm": "video/webm",
+              "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
+
+
+@router.get("/files/{name}")
+def files(name: str, request: Request, _=Depends(enabled)):
+    """The pitch deck, the audio explainer, a video or a picture the team has put in the overview folder (storage/overview) on the server. Nothing else is served."""
+    ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+    path = Path(request.app.state.svc.settings.storage_dir).resolve() / "overview" / Path(name).name
+    if Path(name).name != name or ext not in FILE_TYPES or not path.is_file():
+        raise HTTPException(404)
+    return FileResponse(path, media_type=FILE_TYPES[ext])

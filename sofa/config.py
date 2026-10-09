@@ -106,6 +106,7 @@ class Settings(BaseSettings):
     hub_test_number: str = ""
     hub_story_video_url: str = ""
     hub_demo_video_url: str = ""
+    hub_audio_url: str = ""
     hub_deck_url: str = ""
     hub_cost_note: str = ""
     vendor_merchant: str = "CI Store"  # which shop the /vendor portal runs

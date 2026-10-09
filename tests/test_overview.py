@@ -37,11 +37,35 @@ def test_what_the_deployment_sets_is_shown_and_what_it_leaves_out_is_not():
         assert "https://example.com/deck.pdf" in page and "costs us about" in page
 
 
-def test_a_video_file_plays_in_the_page_and_a_link_does_not():
+def test_a_video_file_plays_a_youtube_link_is_embedded_and_any_other_link_is_a_button():
     with make(hub_story_video_url="https://example.com/story.mp4") as c:
         assert "<video" in c.get("/overview").text
-    with make(hub_story_video_url="https://youtu.be/abc") as c:
-        assert "<video" not in c.get("/overview").text
+    with make(hub_story_video_url="https://youtu.be/abcdefghijk", hub_demo_video_url="https://www.youtube.com/watch?v=lmnopqrstuv") as c:
+        page = c.get("/overview").text
+        assert "youtube-nocookie.com/embed/abcdefghijk" in page and "youtube-nocookie.com/embed/lmnopqrstuv" in page and "<video" not in page
+    with make(hub_demo_video_url="https://drive.google.com/file/d/x/view") as c:
+        page = c.get("/overview").text
+        assert "<iframe" not in page and "Watch the demo" in page
+
+
+def test_the_audio_explainer_has_a_player_only_when_it_is_set():
+    with make() as c:
+        assert "<audio" not in c.get("/overview").text
+    with make(hub_audio_url="/overview/files/explainer.mp3") as c:
+        assert '<audio controls' in c.get("/overview").text
+
+
+def test_files_put_in_the_overview_folder_are_served_and_nothing_else_is(tmp_path):
+    (tmp_path / "overview").mkdir()
+    (tmp_path / "overview" / "deck.pdf").write_bytes(b"%PDF-1.4 test")
+    (tmp_path / "overview" / "notes.txt").write_text("not allowed")
+    (tmp_path / "secret.pdf").write_bytes(b"%PDF outside the folder")
+    with make(storage_dir=str(tmp_path)) as c:
+        ok = c.get("/overview/files/deck.pdf")
+        assert ok.status_code == 200 and ok.headers["content-type"] == "application/pdf" and ok.content.startswith(b"%PDF")
+        assert c.get("/overview/files/notes.txt").status_code == 404      # not a type the page serves
+        assert c.get("/overview/files/missing.pdf").status_code == 404
+        assert c.get("/overview/files/..%2Fsecret.pdf").status_code == 404  # no way out of the folder
 
 
 def test_the_model_log_is_shown_as_tables():
