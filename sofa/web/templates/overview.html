@@ -59,15 +59,36 @@
 
 {{ rule(n.v, "Test it by phone") }}{% set n.v = n.v + 1 %}
 <section class="card" id="test" aria-labelledby="test-title">
-  <h3 id="test-title">Live calls run on our own GPU</h3>
-  <p class="small">Talk's speech recogniser and language model are N-ATLaS, and they run on a GPU server of our own. We start it for your session, so a live test begins with a short email.</p>
+  <p class="eyebrow">Call Talk from any phone</p>
+  {% if s.hub_test_number %}<p style="font-size:clamp(28px,6vw,56px);font-weight:600;letter-spacing:-1px;margin:var(--space-3) 0"><a href="tel:{{ s.hub_test_number|replace(' ', '') }}" style="color:inherit;text-decoration:none">{{ s.hub_test_number }}</a></p>{% endif %}
+  <h3 id="test-title">Live calls run on our own GPU, started for your session</h3>
+  <p class="small">Talk's speech recogniser and language model are N-ATLaS, and they run on a GPU server of our own. We switch it on for each test, so a live call starts with a short email. Without it, the number still answers, but there is nothing behind it to understand you.</p>
   <ol class="small">
-    <li>Email us the time you want to test{% if s.hub_contact_email %}: <a href="mailto:{{ s.hub_contact_email }}">{{ s.hub_contact_email }}</a>{% endif %}.</li>
-    <li>We start the server. Allow about 20 minutes for it to be ready, and we will reply when it is.</li>
-    <li>{% if s.hub_test_number %}Call <b>{{ s.hub_test_number }}</b> from any phone and talk to Talk.{% else %}We send you the number to call, and you talk to Talk from any phone.{% endif %}</li>
+    <li>Email us the time you want to test{% if s.hub_contact_email %}: <a href="mailto:{{ s.hub_contact_email }}">{{ s.hub_contact_email }}</a>{% endif %}. Say how many people will call.</li>
+    <li>We start the server and reply when it is ready. Allow about 20 minutes.</li>
+    <li>{% if s.hub_test_number %}Call <b>{{ s.hub_test_number }}</b> from any phone.{% else %}We send you the number, and you call it from any phone.{% endif %} Talk answers in English, and it follows you into Yoruba.</li>
   </ol>
+  <p class="eyebrow" style="margin-top:var(--space-4)">What to say</p>
+  <ol class="small">
+    <li>"My name is …" when Talk asks who is calling.</li>
+    <li>"What do you have in the store?" Talk lists the products the shop sells.</li>
+    <li>"I want two bags of NPK." Talk adds them and gives the total.</li>
+    <li>"What fertiliser should I use for my maize?" Talk speaks the shop owner's written advice.</li>
+    <li>"That is all." Give a delivery address, then say "yes" to the read-back.</li>
+  </ol>
+  <p class="eyebrow" style="margin-top:var(--space-4)">What happens next</p>
+  <ul class="small">
+    <li>The order is placed, and the caller gets a text message with the account number to pay into.</li>
+    <li>The call appears on the <a href="/demo">live demo page</a> a few seconds later, with what Talk heard and what it answered.</li>
+    <li>The shop owner sees the order in the shop portal.</li>
+  </ul>
+  <p class="eyebrow" style="margin-top:var(--space-4)">For the best result</p>
+  <ul class="small">
+    <li>Use a quiet place, hold the phone close, and say one short sentence at a time.</li>
+    <li>Wait for Talk to finish. The first answer can take a few seconds while the models warm up.</li>
+  </ul>
   {% if s.hub_cost_note %}<p class="small">{{ s.hub_cost_note }}</p>{% endif %}
-  <p class="small">The shop owner's portal, the saved calls and the live demo page are always open and need no GPU.</p>
+  <p class="small">The live demo page, the saved calls and the shop owner's portal are always open and need no GPU.</p>
 </section>
 
 {{ rule(n.v, "Where this goes") }}{% set n.v = n.v + 1 %}

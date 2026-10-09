@@ -87,3 +87,15 @@ def test_a_plain_visit_to_a_callback_address_answers_200_only_with_the_right_sec
             assert c.head(path).status_code == 200
         assert c.get("/voice/inbound/wrong").status_code == 404
         assert c.post("/voice/inbound/right-secret").status_code == 200  # the real callback still works
+
+
+def test_the_phone_test_section_shows_the_number_what_to_say_and_what_happens_next():
+    with make(hub_test_number="+234 708 062 9820", hub_contact_email="hello@example.com", demo_page_enabled=True) as c:
+        page = c.get("/overview").text
+        assert "+234 708 062 9820" in page and 'href="tel:+2347080629820"' in page
+        for line in ("What to say", "What do you have in the store?", "I want two bags of NPK", "What happens next", "account number", "live demo page"):
+            assert line in page, line
+    with make() as c:
+        page = c.get("/overview").text
+        assert "tel:" not in page and "What to say" in page and "We send you the number" in page
+
