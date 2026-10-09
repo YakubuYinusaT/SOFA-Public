@@ -140,6 +140,7 @@ class Settings(BaseSettings):
     filler_every_seconds: float = 6.0  # a slow reply: another holding message every this many seconds, so the caller never sits in silence
     record_timeout_seconds: int = 2
     record_max_seconds: int = 15
+    silence_rms: float = 150.0  # a recording quieter than this (0 to 32767) is treated as silence: on a quiet line the recogniser invents sentences
     match_score_floor: float = 0.3
     match_winner_gap: float = 0.12
     max_calls_per_hour: int = 20
