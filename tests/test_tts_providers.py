@@ -176,3 +176,31 @@ async def test_spitch_never_has_more_than_three_calls_running_and_retries_a_429_
     tts.http = httpx.AsyncClient(base_url="https://api.spitch.app", transport=httpx.MockTransport(handler))
     results = await asyncio.gather(*(tts.synthesize(f"Sentence {i}.", "en") for i in range(6)))
     assert len(results) == 6 and peak <= 3
+
+
+def test_adding_your_own_voice_sends_the_recording_the_transcript_and_the_consent(tmp_path):
+    from scripts.spitch_voice import create_voice
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"voice_id": "voice_abc123"})
+
+    audio = tmp_path / "me.wav"
+    audio.write_bytes(b"RIFF....WAVE")
+    http = httpx.Client(transport=httpx.MockTransport(handler), headers={"Authorization": "Bearer k"})
+    assert create_voice(http, audio, "Hello, this is my voice.", "Yakubu", "en") == "voice_abc123"
+    body = seen[0].content
+    assert b'name="transcript"' in body and b"Hello, this is my voice." in body and b'name="consent"' in body and b"true" in body
+    assert b'filename="me.wav"' in body and seen[0].url.path == "/v1/voices"
+
+
+def test_a_recording_that_is_missing_or_too_big_is_refused_before_anything_is_sent(tmp_path):
+    from scripts.spitch_voice import create_voice
+    http = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(500)))
+    with pytest.raises(SystemExit):
+        create_voice(http, tmp_path / "none.wav", "text", "x")
+    big = tmp_path / "big.wav"
+    big.write_bytes(b"0" * (10 * 1024 * 1024 + 1))
+    with pytest.raises(SystemExit):
+        create_voice(http, big, "text", "x")

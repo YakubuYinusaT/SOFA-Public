@@ -77,3 +77,13 @@ def test_the_model_log_is_shown_as_tables():
 def test_the_pages_can_be_switched_off():
     with make(overview_enabled=False, demo_page_enabled=False) as c:
         assert c.get("/overview").status_code == 404
+
+
+def test_a_plain_visit_to_a_callback_address_answers_200_only_with_the_right_secret():
+    """Africa's Talking's dashboard checks the address before saving it; a visit that got 405 made it say 'A valid callback URL is needed'."""
+    with make(at_callback_secret="right-secret") as c:
+        for path in ("/voice/inbound/right-secret", "/voice/events/right-secret"):
+            assert c.get(path).status_code == 200 and c.get(path).text == "ok"
+            assert c.head(path).status_code == 200
+        assert c.get("/voice/inbound/wrong").status_code == 404
+        assert c.post("/voice/inbound/right-secret").status_code == 200  # the real callback still works

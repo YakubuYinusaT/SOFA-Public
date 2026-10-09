@@ -266,6 +266,15 @@ async def _gateway_inbound(request: Request, secret: str, form, caller: str, des
         return await _fallback(request, secret)
 
 
+@router.api_route("/voice/inbound/{secret}", methods=["GET", "HEAD"], include_in_schema=False)
+@router.api_route("/voice/events/{secret}", methods=["GET", "HEAD"], include_in_schema=False)
+async def reachable(secret: str, request: Request):
+    """A plain visit to a callback address answers 200, so a dashboard that checks the address before saving it (Africa's Talking does) accepts it.
+    It shows nothing and does nothing; the secret is still checked."""
+    _check_secret(request, secret)
+    return Response(content="ok", media_type="text/plain")
+
+
 @router.post("/voice/inbound/{secret}")
 async def inbound(secret: str, request: Request):
     _check_secret(request, secret)
