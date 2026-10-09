@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "_ui.html" import rule %}
+{% block title %}How Talk works{% endblock %}
+
+{% block hero %}
+<section class="hero" aria-labelledby="t-title">
+  <div class="frame">
+    <p class="eyebrow">Technology</p>
+    <h1 id="t-title">How Talk works.</h1>
+    <p class="lede">One phone call, one structured understanding step, and facts that always come from the service, never from the model.</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block body %}
+{% set here = "technology" %}{% include "overview_nav.html" %}
+
+{{ rule(1, "What happens in a call") }}
+<div class="tablewrap"><table class="responsive">
+  <caption>From the caller's voice to the reply.</caption>
+  <thead><tr><th scope="col">Step</th><th scope="col">What happens</th><th scope="col">Built with</th></tr></thead>
+  <tbody>
+    <tr><td data-label="Step">1. The call</td><td data-label="What happens">The caller dials Talk from any phone. The voice network sends the call to our server and records each thing the caller says.</td><td data-label="Built with">Africa's Talking voice and SMS</td></tr>
+    <tr><td data-label="Step">2. Speech to text</td><td data-label="What happens">The recording becomes text, in English or Yoruba, and Talk keeps a second reading when the caller mixes languages.</td><td data-label="Built with">N-ATLaS Whisper</td></tr>
+    <tr><td data-label="Step">3. Understanding</td><td data-label="What happens">One call to the language model works out the language, the service, the action and any amount or item, as structured data. It does not write the answer.</td><td data-label="Built with">N-ATLaS language model, served with vLLM</td></tr>
+    <tr><td data-label="Step">4. Router and tools</td><td data-label="What happens">SOFA picks the service from a registry of tools. The model can only choose tools that exist, each with its own limits.</td><td data-label="Built with">SOFA, our own orchestrator</td></tr>
+    <tr><td data-label="Step">5. Facts</td><td data-label="What happens">Prices, stock, balances and advice come from the service's own records. Nothing the model says is trusted as a fact.</td><td data-label="Built with">Database, partner services</td></tr>
+    <tr><td data-label="Step">6. Wording</td><td data-label="What happens">The reply is written around those facts, and a checker confirms every figure and name is present and none is invented. Otherwise a fixed wording is used.</td><td data-label="Built with">Wording validator</td></tr>
+    <tr><td data-label="Step">7. Voice</td><td data-label="What happens">The reply is spoken one sentence at a time in a Nigerian voice, and played back on the call.</td><td data-label="Built with">Spitch, YarnGPT2</td></tr>
+  </tbody>
+</table></div>
+
+{{ rule(2, "Principles") }}
+<div class="cols three">
+  <section class="card"><p class="eyebrow">Facts</p><h3>The service is the source</h3><p class="small">Every number a caller hears comes from a record. The model understands and words; it never decides a price, a stock level or a balance.</p></section>
+  <section class="card"><p class="eyebrow">Confirm</p><h3>Read back, then yes</h3><p class="small">Before an order is placed or money moves, Talk reads back what it understood and waits for a clear yes.</p></section>
+  <section class="card"><p class="eyebrow">Never stranded</p><h3>It does not hang up</h3><p class="small">If a request cannot be answered, Talk passes it to the service with a summary and tells the caller who will follow up. If an answer is slow, the caller hears a holding message and is called back.</p></section>
+</div>
+
+{{ rule(3, "Languages and the way people speak") }}
+<p class="small">People mix Yoruba, English and Pidgin inside one sentence. Talk reads both language models' versions of what was said and keeps the more confident one. Money and numbers are spoken in English in every language, so there is no confusion over an amount.</p>
+
+{{ rule(4, "How a service connects") }}
+<div class="cols three">
+  <section class="card"><p class="eyebrow">By web API</p><p class="small">A service answers a small set of signed requests: look something up, create an order, report a status.</p></section>
+  <section class="card"><p class="eyebrow">By MCP</p><p class="small">A service that already speaks the Model Context Protocol exposes its tools to SOFA directly.</p></section>
+  <section class="card"><p class="eyebrow">By search</p><p class="small">An information service is answered from a search source, and Talk says only what the search returned.</p></section>
+</div>
+<p class="small">A new service is added by configuration: what it offers, what callers can ask, and where to reach it. There is no code change.</p>
+
+{{ rule(5, "The stack") }}
+<div class="tablewrap"><table class="responsive">
+  <caption>The main parts.</caption>
+  <thead><tr><th scope="col">Part</th><th scope="col">What we use</th></tr></thead>
+  <tbody>
+    <tr><td data-label="Part">Voice and SMS</td><td data-label="What we use">Africa's Talking</td></tr>
+    <tr><td data-label="Part">Speech recognition</td><td data-label="What we use">N-ATLaS Whisper (English and Yoruba)</td></tr>
+    <tr><td data-label="Part">Language model</td><td data-label="What we use">N-ATLaS, on our own GPU</td></tr>
+    <tr><td data-label="Part">Voice</td><td data-label="What we use">Spitch, with YarnGPT2 as the fallback</td></tr>
+    <tr><td data-label="Part">Backend</td><td data-label="What we use">Python, FastAPI, SQLAlchemy</td></tr>
+    <tr><td data-label="Part">Payments</td><td data-label="What we use">Paystack, and a partner bank wallet</td></tr>
+    <tr><td data-label="Part">Hosting</td><td data-label="What we use">A small server for the app, and a GPU that starts on request</td></tr>
+  </tbody>
+</table></div>
+<p class="caption">The code is open: <a href="https://github.com/YakubuYinusaT/SOFA-Public" rel="noopener">github.com/YakubuYinusaT/SOFA-Public</a>.</p>
+{% endblock %}

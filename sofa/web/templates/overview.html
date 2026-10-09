@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "_ui.html" import rule, metric %}
+{% block title %}Talk, an AI agent that serves you over a phone call{% endblock %}
+
+{% block hero %}
+<section class="hero" aria-labelledby="ov-title">
+  <div class="frame">
+    <p class="eyebrow">Connected Intelligence</p>
+    <h1 id="ov-title">Talk: an AI agent that serves you over a phone call.</h1>
+    <p class="lede">Digital services for people with no smartphone and no data. Talk is powered by SOFA, our own agentic AI engine, built on N-ATLaS.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-5)">
+      {% if demo_page %}<a class="btn" href="/demo">Try the live demo</a>{% endif %}
+      <a class="btn ghost" href="#test">Test it by phone</a>
+      <a class="btn ghost" href="#partner">Partner with us</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block body %}
+{% set here = "home" %}{% include "overview_nav.html" %}
+
+{% if s.hub_story_video_url or s.hub_demo_video_url %}
+{{ rule(1, "Watch") }}
+<div class="cols two">
+  {% if s.hub_story_video_url %}<section class="card"><p class="eyebrow">The story</p><h3>The problem and what we built</h3>
+    {% if story_kind == "file" %}<video controls preload="metadata" style="width:100%;border-radius:var(--radius-sm)"><source src="{{ s.hub_story_video_url }}"></video>
+    {% else %}<p class="small">A short talk on the problem and how Talk solves it.</p><a class="btn" href="{{ s.hub_story_video_url }}" rel="noopener">Watch the story</a>{% endif %}</section>{% endif %}
+  {% if s.hub_demo_video_url %}<section class="card"><p class="eyebrow">The demo</p><h3>A call, from start to finish</h3>
+    {% if demo_kind == "file" %}<video controls preload="metadata" style="width:100%;border-radius:var(--radius-sm)"><source src="{{ s.hub_demo_video_url }}"></video>
+    {% else %}<p class="small">A real call to Talk, and what the shop owner sees.</p><a class="btn" href="{{ s.hub_demo_video_url }}" rel="noopener">Watch the demo</a>{% endif %}</section>{% endif %}
+</div>
+{% endif %}
+
+{{ rule(2 if (s.hub_story_video_url or s.hub_demo_video_url) else 1, "The problem, and what we built") }}
+<div class="cols three">
+  {{ metric("Mobile lines in Nigeria", "195.1M", "NCC, July 2026") }}
+  {{ metric("Of those, on 2G", "1 in 3", "voice works, apps do not") }}
+  {{ metric("Adults outside finance", "28.8M", "EFInA, 2023") }}
+</div>
+<div class="cols two" style="margin-top:var(--space-5)">
+  <section class="card"><p class="eyebrow">The problem</p><h3>Digital assumes a smartphone</h3>
+    <p class="small">Banking, shopping, information, logistics and other everyday services are becoming digital by default. A person without a smartphone or reliable internet still needs them, and the alternative is a journey and a queue. Most AI is built the same way, around apps and data, so it widens the gap.</p></section>
+  <section class="card"><p class="eyebrow">What we built</p><h3>Call, ask, done</h3>
+    <p class="small">Talk turns an ordinary phone call into a way to use digital services. You call, say what you need in your own language, and Talk finds the service, gets it done and tells you the result. It works on any phone, on any network, with nothing to install. SOFA, our engine underneath, understands the request, picks the service and coordinates the tools.</p></section>
+</div>
+<p class="caption"><a href="/overview/technology">How it works in detail</a> · <a href="/overview/use-cases">Everything Talk can do</a></p>
+
+{{ rule(3 if (s.hub_story_video_url or s.hub_demo_video_url) else 2, "What we found testing the models") }}
+<div class="cols three">
+  <section class="card"><p class="eyebrow">Answers cut off</p><h3>5 of 8 checks, then none</h3><p class="small">The language model was stopping mid-answer. We gave it room to finish, and no answer is cut off now.</p></section>
+  <section class="card"><p class="eyebrow">Voice speed</p><h3>2.2 times faster</h3><p class="small">Speech was made at about 35 tokens a second. A fixed-size cache doubled it, so replies reach the caller sooner.</p></section>
+  <section class="card"><p class="eyebrow">Clear speech</p><h3>31% to 96%</h3><p class="small">We tested every voice by having the speech recogniser read it back. A Nigerian voice from Spitch lifted the words understood from 31% to 96%.</p></section>
+</div>
+<p class="caption">Every fault we hit, what we changed and the measured effect, are in <a href="/overview/findings">the full record</a>. It also covers Yoruba, which Talk understands end to end.</p>
+
+{{ rule(4 if (s.hub_story_video_url or s.hub_demo_video_url) else 3, "Test it by phone") }}
+<section class="card" id="test" aria-labelledby="test-title">
+  <h3 id="test-title">Live calls run on our own GPU</h3>
+  <p class="small">Talk's speech recogniser and language model are N-ATLaS, and they run on a GPU server of our own. We start it for your session, so a live test begins with a short email.</p>
+  <ol class="small">
+    <li>Email us the time you want to test{% if s.hub_contact_email %}: <a href="mailto:{{ s.hub_contact_email }}">{{ s.hub_contact_email }}</a>{% endif %}.</li>
+    <li>We start the server. Allow about 20 minutes for it to be ready, and we will reply when it is.</li>
+    <li>{% if s.hub_test_number %}Call <b>{{ s.hub_test_number }}</b> from any phone and talk to Talk.{% else %}We send you the number to call, and you talk to Talk from any phone.{% endif %}</li>
+  </ol>
+  {% if s.hub_cost_note %}<p class="small">{{ s.hub_cost_note }}</p>{% endif %}
+  <p class="small">The shop owner's portal, the saved calls and the live demo page are always open and need no GPU.</p>
+</section>
+
+{{ rule(5 if (s.hub_story_video_url or s.hub_demo_video_url) else 4, "Where this goes") }}
+<section class="card">
+  <p class="eyebrow">Your own number becomes your AI agent</p>
+  <h3>Call your own number, and your agent answers</h3>
+  <p class="small">Today, calling your own number gives a busy tone. We are working with network providers so that the same call reaches your personal Talk agent: "Send 5k to my brother", "Where is my parcel?", "Help me buy light token". Your phone number becomes your way into every digital service.</p>
+  {% if s.hub_deck_url %}<a class="btn ghost" href="{{ s.hub_deck_url }}" rel="noopener">See the pitch deck</a>{% endif %}
+</section>
+
+{{ rule(6 if (s.hub_story_video_url or s.hub_demo_video_url) else 5, "Partner with us") }}
+<div class="cols three" id="partner">
+  <section class="card"><p class="eyebrow">Service providers</p><h3>Reach customers who have no app</h3><p class="small">Connect a clinic, a courier, a shop, a farm supplier or a public office once, and callers can reach it by voice. No code changes on our side, and you get a dashboard for calls, orders and daily payouts.</p></section>
+  <section class="card"><p class="eyebrow">Banks and payment partners</p><h3>Power wallets and payments</h3><p class="small">Every Talk account comes with a banking wallet from a partner bank, or links the bank a person already uses. Customers pay for any service in the same call.</p></section>
+  <section class="card"><p class="eyebrow">Network providers</p><h3>Put Talk on every number</h3><p class="small">Help us turn each SIM into a personal AI access point, with identity confirmed by the network.</p></section>
+</div>
+{% if s.hub_contact_email %}<p class="caption">Write to <a href="mailto:{{ s.hub_contact_email }}">{{ s.hub_contact_email }}</a>.</p>{% endif %}
+{% endblock %}

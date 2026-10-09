@@ -89,6 +89,8 @@ def entry(request: Request):
     side = ui.profile(s)
     if side == "all":
         return RedirectResponse("/admin/home", status_code=307)
+    if s.overview_enabled and side == "naic":
+        return RedirectResponse("/overview", status_code=307)  # the front door of the public build: the story first, with the demo and the tests one click away
     if s.demo_page_enabled:
         return RedirectResponse("/demo", status_code=307)
     return RedirectResponse("/vendor" if side == "naic" else "/provider", status_code=307)

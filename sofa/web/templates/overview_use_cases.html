@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "_ui.html" import rule %}
+{% block title %}What Talk can do{% endblock %}
+
+{% block hero %}
+<section class="hero" aria-labelledby="u-title">
+  <div class="frame">
+    <p class="eyebrow">Use cases</p>
+    <h1 id="u-title">One agent, every service.</h1>
+    <p class="lede">Each service is one partner connected to SOFA. A caller asks in plain words and Talk does the rest.</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block body %}
+{% set here = "cases" %}{% include "overview_nav.html" %}
+
+{{ rule(1, "The services") }}
+<div class="cols three">
+  {% for name, what, status, said in sectors %}
+  <section class="card"><p class="eyebrow">{{ status }}</p><h3>{{ name }}</h3><p class="small">{{ what }}</p><p class="caption">A caller says: "{{ said }}"</p></section>
+  {% endfor %}
+</div>
+
+{{ rule(2, "Three calls") }}
+<div class="cols three">
+  <section class="card"><p class="eyebrow">Banking</p><p class="small"><b>Caller:</b> Abeg, send 5k to my brother.<br><b>Talk:</b> That is 5,000 naira to Emeka Okafor. Should I go ahead?<br><b>Caller:</b> Beeni.<br><b>Talk:</b> Done. 5,000 naira sent.</p></section>
+  <section class="card"><p class="eyebrow">Agriculture</p><p class="small"><b>Caller:</b> When should I put fertiliser on my maize?<br><b>Talk:</b> Two bags of NPK for each acre at planting, then one bag of urea four to six weeks later.<br><b>Caller:</b> Order two bags of NPK for me.<br><b>Talk:</b> Okay. 2 bags of NPK, that is 76,000 naira. Anything else?</p></section>
+  <section class="card"><p class="eyebrow">Health</p><p class="small"><b>Caller:</b> Abeg, find me the nearest clinic.<br><b>Talk:</b> The nearest is Grace Medical Clinic, 1.2 km from you. Should I send the address by SMS?<br><b>Caller:</b> Yes please.<br><b>Talk:</b> Sent. Anything else?</p></section>
+</div>
+<p class="caption">Services marked Live run today. The others are connected the same way.</p>
+{% endblock %}

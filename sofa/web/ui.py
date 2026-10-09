@@ -75,7 +75,9 @@ def footer_for(kind: str, request) -> dict:
     if kind == "naic":
         return {"groups": [("Shop owner portal", [("Today", "/vendor"), ("Orders", "/vendor/orders"), ("Stock and prices", "/vendor/stock"),
                                                     ("Advice Sofa gives", "/vendor/advice"), ("Customer questions", "/vendor/questions")]),
-                           *([("Live", demo)] if demo else [])],
+                           *([("Live", demo)] if demo else []),
+                           *([("About", [("Overview", "/overview"), ("Technology", "/overview/technology"), ("Use cases", "/overview/use-cases"),
+                                         ("What we found", "/overview/findings")])] if settings.overview_enabled else [])],
                 "lines": [COMPANY_LINE, "ConnectedCI Ltd", NAIC_DISCLAIMER]}
     on = services_on(settings)
     consoles = [("Admin home", "/admin/home"), ("Team console", "/admin")]

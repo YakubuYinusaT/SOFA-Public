@@ -11,7 +11,7 @@ from fastapi.exceptions import HTTPException
 from .config import Settings, get_settings
 from .container import build_services
 from .db import init_db, make_engine, make_session_factory
-from .routes import admin, demo, hub, pages, provider, vendor, voice, webhooks
+from .routes import admin, demo, hub, overview, pages, provider, vendor, voice, webhooks
 from .web.auth import LoginRequired
 
 ATTRIBUTION = (
@@ -51,6 +51,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(provider.router)
     app.include_router(vendor.router)
     app.include_router(demo.router)
+    app.include_router(overview.router)
     app.include_router(hub.router)
     @app.get("/favicon.ico", include_in_schema=False)
     def favicon():

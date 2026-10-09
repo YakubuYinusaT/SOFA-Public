@@ -101,6 +101,13 @@ class Settings(BaseSettings):
 
     admin_token: str = "dev-admin-token"
     demo_page_enabled: bool = False  # the public live page (/demo): shows what callers said, so keep it off except on a demo deployment
+    overview_enabled: bool = True  # the overview pages (/overview): the story, the technology, the use cases and what testing the models showed
+    hub_contact_email: str = ""  # what differs from one deployment to the next is set here; a block with nothing set is left out of the pages
+    hub_test_number: str = ""
+    hub_story_video_url: str = ""
+    hub_demo_video_url: str = ""
+    hub_deck_url: str = ""
+    hub_cost_note: str = ""
     vendor_merchant: str = "CI Store"  # which shop the /vendor portal runs
     admin_email: str = ""  # where anything SOFA emails to its owner goes (nothing is emailed yet); set ADMIN_EMAIL in .env
     provider_bank: str = "demobank"  # which bank the /provider desk speaks for

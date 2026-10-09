@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}What we found testing the models{% endblock %}
+
+{% block hero %}
+<section class="hero" aria-labelledby="f-title">
+  <div class="frame">
+    <p class="eyebrow">The record</p>
+    <h1 id="f-title">What we found testing the models.</h1>
+    <p class="lede">Every fault we hit with the language model, the speech recogniser and the voice, what we changed, and the measured effect.</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block body %}
+{% set here = "findings" %}{% include "overview_nav.html" %}
+{{ body|safe }}
+{% endblock %}
