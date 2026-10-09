@@ -113,15 +113,25 @@ class SpitchTTS:
         return _repair_wav(resp.content)
 
 
+MIN_WORDS = 4         # a piece shorter than this is joined to its neighbour
 PAUSE_SECONDS = 0.3   # quiet between two spoken sentences
 LEAD_SECONDS = 0.25   # quiet before the first word: players that wake their speaker on play swallow the start of a clip ("Done." went unheard)
 
 
 def split_sentences(text: str) -> list[str]:
-    """One piece per sentence, each made and spoken on its own, one after the other. Hosted voices say even "Done." and "Okay." clearly,
-    and a long text read in one go loses its last sentence (a closing question like "Anything else?" went unheard)."""
+    """One piece per sentence, each made and spoken on its own, one after the other, because a long text read in one go loses its last sentence
+    (a closing question like "Anything else?" went unheard). A piece under four words is joined to its neighbour: measured on the first real
+    calls, the voice puts junk in front of very short clips ("Okay." came out wrong 7 times in 7, "Got it." 4 in 8) and not in longer ones (0 in 24)."""
     import re
-    return [p.strip() for p in re.split(r"(?<=[.?!])\s+", text.strip()) if p.strip()]
+    pieces = [p.strip() for p in re.split(r"(?<=[.?!])\s+", text.strip()) if p.strip()]
+    while len(pieces) > 1:
+        short = next((i for i, p in enumerate(pieces) if len(p.split()) < MIN_WORDS), None)
+        if short is None:
+            break
+        j = short + 1 if short + 1 < len(pieces) else short - 1  # the sentence after it, or for the last one the sentence before
+        lo, hi = sorted((short, j))
+        pieces[lo:hi + 1] = [pieces[lo] + " " + pieces[hi]]
+    return pieces
 
 
 def join_wavs(wavs: list[bytes], pause: float = PAUSE_SECONDS, lead: float = LEAD_SECONDS) -> bytes:

@@ -126,14 +126,17 @@ async def test_a_failing_hosted_voice_falls_back_to_the_gpu_voice():
     assert await RoutedTTS(Broken(), Gpu(), {"en"}).synthesize("hi", "en") == b"gpu"
 
 
-def test_every_sentence_is_its_own_piece():
+def test_sentences_are_spoken_one_by_one_and_a_piece_under_four_words_joins_its_neighbour():
     from sofa.clients.tts import split_sentences
+    # "Okay." alone came out wrong 7 times in 7 on the first real calls, so it goes with the sentence after it
     assert split_sentences("Okay. 2 bags of NPK 15-15-15 Fertilizer, that's 76,000 naira. Anything else?") == [
-        "Okay.", "2 bags of NPK 15-15-15 Fertilizer, that's 76,000 naira.", "Anything else?"]
+        "Okay. 2 bags of NPK 15-15-15 Fertilizer, that's 76,000 naira. Anything else?"]
     assert split_sentences("Done. I've sent the account number to this phone by SMS. Once you pay, we'll call you back to confirm. Thank you, Bola.") == [
-        "Done.", "I've sent the account number to this phone by SMS.", "Once you pay, we'll call you back to confirm.", "Thank you, Bola."]
+        "Done. I've sent the account number to this phone by SMS.", "Once you pay, we'll call you back to confirm. Thank you, Bola."]
+    assert split_sentences("Nice to meet you, Bola. What would you like today?") == ["Nice to meet you, Bola.", "What would you like today?"]
     assert split_sentences("Where should we deliver?") == ["Where should we deliver?"]
-    assert split_sentences("Urea is 34,000 naira per bag.") == ["Urea is 34,000 naira per bag."]
+    assert split_sentences("Sent. Anything else?") == ["Sent. Anything else?"]
+    assert split_sentences("Urea Fertilizer is 34,000 naira per bag.") == ["Urea Fertilizer is 34,000 naira per bag."]
 
 
 @pytest.mark.anyio
@@ -152,8 +155,8 @@ async def test_each_piece_is_made_separately_and_joined_with_a_pause():
             w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(b"\x01\x00" * n)
         return buf.getvalue()
 
-    out = await RoutedTTS(Hosted(), None, {"en"}).synthesize("Your total is 5,000 naira. Anything else?", "en")
-    assert calls == ["Your total is 5,000 naira.", "Anything else?"]
+    out = await RoutedTTS(Hosted(), None, {"en"}).synthesize("Your total is five thousand naira today. Which one would you like?", "en")
+    assert calls == ["Your total is five thousand naira today.", "Which one would you like?"]
     with wave.open(io.BytesIO(out)) as w:
         assert w.getnframes() == 2400 * 2 + int(24000 * 0.3) + int(24000 * 0.25)  # one gap, and the lead-in
 
