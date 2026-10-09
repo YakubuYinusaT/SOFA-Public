@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}The Talk pitch deck{% endblock %}
+
+{% block head %}
+<meta name="robots" content="noindex, nofollow">
+<style>
+  #deck:fullscreen { background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: var(--space-3); }
+  #deck:fullscreen #stage { width: min(100vw, calc((100vh - 96px) * 16 / 9)); }
+  #deck:fullscreen .deck-bar { width: min(100vw, calc((100vh - 96px) * 16 / 9)); }
+</style>
+{% endblock %}
+
+{% block hero %}
+<section class="hero" aria-labelledby="d-title">
+  <div class="frame">
+    <p class="eyebrow">Pitch deck</p>
+    <h1 id="d-title">Talk, in {{ deck }} slides.</h1>
+    <p class="lede">The problem, how Talk works, what already runs and where it goes next. Use the buttons, the arrow keys or a swipe.</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block body %}
+{% set here = "deck" %}{% include "overview_nav.html" %}
+<div id="deck" tabindex="-1">
+  <div id="stage" role="img" aria-label="Slide 1 of {{ deck }}: {{ titles[0] }}" style="width:100%;aspect-ratio:16/9;background:#0b0b0b center / contain no-repeat;border-radius:var(--radius-sm);user-select:none;-webkit-user-select:none"></div>
+  <div class="deck-bar" style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-top:var(--space-3)">
+    <button type="button" id="deck-prev" class="ghost">Previous</button>
+    <p class="small" id="deck-pos" aria-live="polite" style="margin:0">1 of {{ deck }}</p>
+    <span style="display:flex;gap:var(--space-2)"><button type="button" id="deck-full" class="ghost">Full screen</button><button type="button" id="deck-next">Next</button></span>
+  </div>
+</div>
+<noscript><p class="small">Turn on JavaScript to see the slides.</p></noscript>
+<details style="margin-top:var(--space-5)">
+  <summary>The slides, in words</summary>
+  <ol class="small">{% for t in titles %}<li>{{ t }}</li>{% endfor %}</ol>
+</details>
+<script>
+(function () {
+  var urls = {{ urls|tojson }}, titles = {{ titles|tojson }}, at = 0;
+  var root = document.getElementById("deck"), stage = document.getElementById("stage"), pos = document.getElementById("deck-pos");
+  function show(n) {
+    at = Math.max(0, Math.min(urls.length - 1, n));
+    stage.style.backgroundImage = "url(" + urls[at] + ")";
+    stage.setAttribute("aria-label", "Slide " + (at + 1) + " of " + urls.length + ": " + titles[at]);
+    pos.textContent = (at + 1) + " of " + urls.length;
+    try { history.replaceState(null, "", "#" + (at + 1)); } catch (e) {}
+    [at - 1, at + 1].forEach(function (k) { if (urls[k]) { new Image().src = urls[k]; } });
+  }
+  function full() {
+    if (document.fullscreenElement) { document.exitFullscreen(); } else if (root.requestFullscreen) { root.requestFullscreen(); }
+  }
+  document.getElementById("deck-prev").addEventListener("click", function () { show(at - 1); });
+  document.getElementById("deck-next").addEventListener("click", function () { show(at + 1); });
+  document.getElementById("deck-full").addEventListener("click", full);
+  document.addEventListener("keydown", function (e) {
+    if (e.target && /^(input|textarea|select)$/i.test(e.target.tagName)) { return; }
+    if (e.key === "ArrowRight" || e.key === "PageDown") { show(at + 1); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") { show(at - 1); }
+    else if (e.key === "Home") { show(0); }
+    else if (e.key === "End") { show(urls.length - 1); }
+    else if (e.key === "f" || e.key === "F") { full(); }
+  });
+  var startX = null;
+  stage.addEventListener("touchstart", function (e) { startX = e.touches[0].clientX; }, { passive: true });
+  stage.addEventListener("touchend", function (e) {
+    if (startX === null) { return; }
+    var dx = e.changedTouches[0].clientX - startX; startX = null;
+    if (Math.abs(dx) > 40) { show(at + (dx < 0 ? 1 : -1)); }
+  });
+  stage.addEventListener("click", function (e) { show(at + (e.clientX > stage.getBoundingClientRect().left + stage.offsetWidth / 2 ? 1 : -1)); });
+  root.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  root.addEventListener("dragstart", function (e) { e.preventDefault(); });
+  show((parseInt(location.hash.slice(1), 10) || 1) - 1);
+})();
+</script>
+{% endblock %}

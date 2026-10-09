@@ -99,3 +99,43 @@ def test_the_phone_test_section_shows_the_number_what_to_say_and_what_happens_ne
         page = c.get("/overview").text
         assert "tel:" not in page and "What to say" in page and "We send you the number" in page
 
+
+
+def put_deck(tmp_path, count=3):
+    folder = tmp_path / "overview" / "deck"
+    folder.mkdir(parents=True)
+    for k in range(1, count + 1):
+        (folder / f"{k:02d}.jpg").write_bytes(b"\xff\xd8\xff fake jpeg " + bytes([k]))
+    (folder / "titles.txt").write_text("The first slide\nThe second slide\nThe third slide\n", encoding="utf-8")
+    (tmp_path / "overview" / "talk.pdf").write_bytes(b"%PDF-1.4 the whole deck")  # sits in the overview folder, but the viewer never links it
+    return folder
+
+
+def test_the_pitch_deck_is_a_viewer_of_pictures_with_nothing_to_download(tmp_path):
+    put_deck(tmp_path)
+    with make(storage_dir=str(tmp_path)) as c:
+        page = c.get("/overview/deck")
+        assert page.status_code == 200 and "noindex" in page.text and page.headers["x-robots-tag"].startswith("noindex")
+        assert "/overview/deck/01.jpg" in page.text and "/overview/deck/03.jpg" in page.text and "The second slide" in page.text
+        assert ".pdf" not in page.text and ".pptx" not in page.text and "download=" not in page.text and "<img" not in page.text.split("<main")[-1]
+        home = c.get("/overview").text
+        assert 'href="/overview/deck"' in home and "View the deck" in home and "3 slides" in home
+
+
+def test_a_slide_picture_is_sent_only_as_part_of_the_page_and_is_not_kept(tmp_path):
+    put_deck(tmp_path)
+    with make(storage_dir=str(tmp_path)) as c:
+        ok = c.get("/overview/deck/01.jpg", headers={"sec-fetch-dest": "image"})
+        assert ok.status_code == 200 and ok.headers["content-type"] == "image/jpeg"
+        assert "no-store" in ok.headers["cache-control"] and ok.headers["content-disposition"] == "inline" and "noindex" in ok.headers["x-robots-tag"]
+        assert c.get("/overview/deck/01.jpg", headers={"sec-fetch-dest": "document"}).status_code == 404  # opened on its own in a tab
+        for bad in ("titles.txt", "..%2F..%2Fsecret.jpg", "1.png", "abcd.jpg", "9999.jpg", "07.jpg"):
+            assert c.get(f"/overview/deck/{bad}", headers={"sec-fetch-dest": "image"}).status_code == 404, bad
+
+
+def test_without_slide_pictures_there_is_no_deck_page_and_no_link_to_one(tmp_path):
+    with make(storage_dir=str(tmp_path)) as c:
+        assert c.get("/overview/deck").status_code == 404
+        assert "/overview/deck" not in c.get("/overview").text
+    with make(storage_dir=str(tmp_path), hub_deck_url="https://example.com/deck.pdf") as c:
+        assert "https://example.com/deck.pdf" in c.get("/overview").text  # the older way, a link someone gives, still works
