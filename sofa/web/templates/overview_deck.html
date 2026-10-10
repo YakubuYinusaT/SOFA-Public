@@ -7,6 +7,16 @@
   #deck:fullscreen { background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: var(--space-3); }
   #deck:fullscreen #stage { width: min(100vw, calc((100vh - 96px) * 16 / 9)); }
   #deck:fullscreen .deck-bar { width: min(100vw, calc((100vh - 96px) * 16 / 9)); }
+  .deck-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-top: var(--space-3); }
+  .deck-bar .pos { flex: 1 1 auto; text-align: center; margin: 0; order: 2; }
+  #deck-prev { order: 1; } #deck-full { order: 3; } #deck-next { order: 4; }
+  .deck-hint { display: none; }
+  @media (max-width: 640px) {
+    #deck-prev, #deck-next { flex: 1 1 40%; order: 1; }
+    .deck-bar .pos { order: 2; flex-basis: 50%; text-align: left; }
+    #deck-full { order: 3; flex: 1 1 40%; }
+    .deck-hint { display: block; }
+  }
 </style>
 {% endblock %}
 
@@ -21,15 +31,16 @@
 {% endblock %}
 
 {% block body %}
-{% set here = "deck" %}{% include "overview_nav.html" %}
 <div id="deck" tabindex="-1">
   <div id="stage" role="img" aria-label="Slide 1 of {{ deck }}: {{ titles[0] }}" style="width:100%;aspect-ratio:16/9;background:#0b0b0b center / contain no-repeat;border-radius:var(--radius-sm);user-select:none;-webkit-user-select:none"></div>
-  <div class="deck-bar" style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-top:var(--space-3)">
+  <div class="deck-bar">
     <button type="button" id="deck-prev" class="ghost">Previous</button>
-    <p class="small" id="deck-pos" aria-live="polite" style="margin:0">1 of {{ deck }}</p>
-    <span style="display:flex;gap:var(--space-2)"><button type="button" id="deck-full" class="ghost">Full screen</button><button type="button" id="deck-next">Next</button></span>
+    <p class="small pos" id="deck-pos" aria-live="polite">1 of {{ deck }}</p>
+    <button type="button" id="deck-full" class="ghost">Full screen</button>
+    <button type="button" id="deck-next">Next</button>
   </div>
 </div>
+<p class="caption deck-hint">The slides are drawn for a wide screen. Turn your phone sideways, or use full screen, to read them.</p>
 <noscript><p class="small">Turn on JavaScript to see the slides.</p></noscript>
 <details style="margin-top:var(--space-5)">
   <summary>The slides, in words</summary>

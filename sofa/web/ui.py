@@ -9,7 +9,9 @@ or service is exposed. The chip always shows the state's own name; colour alone 
   inert      nothing is owed and nothing is running
 """
 
+import re
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 STATE_CLASS = {
     # confirmed
@@ -89,7 +91,64 @@ def footer_for(kind: str, request) -> dict:
             "lines": [COMPANY_LINE, "ConnectedCI Ltd. Internal console."]}
 
 
+DECK_SLIDE = re.compile(r"\d{1,3}\.jpg")
+
+
+def deck_dir(settings) -> Path:
+    return Path(settings.storage_dir).resolve() / "overview" / "deck"
+
+
+def deck_slides(settings) -> list[str]:
+    """The slide pictures (01.jpg, 02.jpg, ...) the team put in the deck folder on the server, in order. The deck is shown as pictures only, so a file
+    that could be edited or reused (a PowerPoint, a PDF) is never sent to a visitor."""
+    folder = deck_dir(settings)
+    if not folder.is_dir():
+        return []
+    return sorted((p.name for p in folder.iterdir() if p.is_file() and DECK_SLIDE.fullmatch(p.name)), key=lambda n: int(n.split(".")[0]))
+
+
+def site_nav(kind: str, request) -> list[tuple[str, str, bool]]:
+    """The links across the top of every page that is not inside a signed-in console: where else a reader can go. Only pages of the page's own side are
+    listed (the shop pages never link to the bank pages, nor the bank pages to the shop pages). Each entry is (label, address, whether it is this page)."""
+    settings = request.app.state.svc.settings
+    path = request.url.path
+    items: list[tuple[str, str]] = []
+    if kind == "naic":
+        if settings.overview_enabled:
+            items += [("Overview", "/overview"), ("Technology", "/overview/technology"), ("Use cases", "/overview/use-cases"), ("What we found", "/overview/findings")]
+            if deck_slides(settings):
+                items.append(("Pitch deck", "/overview/deck"))
+            elif settings.hub_deck_url:
+                items.append(("Pitch deck", settings.hub_deck_url))
+        if settings.demo_page_enabled:
+            items.append(("Live demo", "/demo"))
+        if console_enabled(settings, "vendor"):
+            items.append(("Shop owner portal", "/vendor"))
+    elif kind == "demobank":
+        if settings.demo_page_enabled:
+            items.append(("Live demo", "/demo"))
+        if console_enabled(settings, "provider"):
+            items.append(("Bank service desk", "/provider"))
+
+    def here(href: str) -> bool:
+        if href == "/overview":
+            return path == "/overview"
+        return href.startswith("/") and (path == href or path.startswith(href + "/"))
+    return [(label, href, here(href)) for label, href in items]
+
+
+def site_home(kind: str, request) -> tuple[str, str] | None:
+    """The 'back to the site' link inside a signed-in console: the first page of the site menu."""
+    nav = site_nav(kind, request)
+    return (f"Back to {nav[0][0].lower()}", nav[0][1]) if nav else None
+
+
 def install(templates) -> None:
     templates.env.filters["state_class"] = state_class
     templates.env.globals["as_of"] = as_of
     templates.env.globals["footer_for"] = footer_for
+    templates.env.globals["site_nav"] = site_nav
+    templates.env.globals["site_home"] = site_home
+    static = Path(__file__).resolve().parent / "static"
+    # the stylesheet and script carry their last-changed time in the address, so a visitor's browser fetches the new file after an update instead of keeping the old one
+    templates.env.globals["asset_v"] = str(int(max((static / n).stat().st_mtime for n in ("ci.css", "ci.js") if (static / n).exists())))

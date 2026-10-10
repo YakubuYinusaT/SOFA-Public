@@ -1,8 +1,0 @@
-<nav class="actions" aria-label="Overview pages" style="display:flex;flex-wrap:wrap;gap:var(--space-3);margin:var(--space-5) 0">
-  <a class="btn {{ '' if here == 'home' else 'ghost' }} small" href="/overview">Overview</a>
-  <a class="btn {{ '' if here == 'technology' else 'ghost' }} small" href="/overview/technology">Technology</a>
-  <a class="btn {{ '' if here == 'cases' else 'ghost' }} small" href="/overview/use-cases">Use cases</a>
-  <a class="btn {{ '' if here == 'findings' else 'ghost' }} small" href="/overview/findings">What we found</a>
-  {% if demo_page %}<a class="btn ghost small" href="/demo">Live demo</a>{% endif %}
-  {% if deck %}<a class="btn {{ '' if here == 'deck' else 'ghost' }} small" href="/overview/deck">Pitch deck</a>{% elif s.hub_deck_url %}<a class="btn ghost small" href="{{ s.hub_deck_url }}" rel="noopener">Pitch deck</a>{% endif %}
-</nav>

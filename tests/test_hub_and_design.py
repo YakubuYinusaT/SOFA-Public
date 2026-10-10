@@ -1,8 +1,9 @@
 """The master page, and the Connected Intelligence design system as it is applied: tokens, contrast, landmarks, and every link on the master page."""
 
-from markupsafe import escape
 import re
 from pathlib import Path
+
+from markupsafe import escape
 
 import pytest
 
@@ -90,7 +91,7 @@ def login(client, who):
 def test_each_console_page_follows_the_shell(client, who, path):
     login(client, who)
     html = client.get(path).text
-    assert 'href="/static/ci.css"' in html and 'class="skip-link"' in html and '<main id="main"' in html
+    assert re.search(r'href="/static/ci\.css(\?v=\d+)?"', html) and 'class="skip-link"' in html and '<main id="main"' in html
     assert html.count("<h1") == 1
     assert 'aria-current="page"' in html  # the page you are on is marked in the navigation
 

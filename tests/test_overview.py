@@ -1,5 +1,7 @@
 """The overview pages: they open for anyone, say the right things, and show only what the deployment has set."""
 
+import re
+
 from fastapi.testclient import TestClient
 
 from sofa.config import Settings
@@ -139,3 +141,60 @@ def test_without_slide_pictures_there_is_no_deck_page_and_no_link_to_one(tmp_pat
         assert "/overview/deck" not in c.get("/overview").text
     with make(storage_dir=str(tmp_path), hub_deck_url="https://example.com/deck.pdf") as c:
         assert "https://example.com/deck.pdf" in c.get("/overview").text  # the older way, a link someone gives, still works
+
+
+def menu_of(page: str) -> str:
+    found = re.search(r'<nav class="nav" id="site-nav".*?</nav>', page, re.S)
+    assert found, "the page has no menu across the top"
+    return found.group(0)
+
+
+def test_every_public_page_has_the_site_menu_and_marks_where_you_are():
+    with make(demo_page_enabled=True) as c:
+        for path, here in (("/overview", "Overview"), ("/overview/technology", "Technology"), ("/overview/use-cases", "Use cases"),
+                           ("/overview/findings", "What we found"), ("/demo", "Live demo"), ("/vendor/login", "Shop owner portal")):
+            page = c.get(path).text
+            menu = menu_of(page)
+            for label in ("Overview", "Technology", "Use cases", "What we found", "Live demo", "Shop owner portal"):
+                assert f">{label}</a>" in menu, (path, label)
+            assert re.search(r'aria-current="page">\s*' + re.escape(here) + "<", menu), (path, "the page you are on is marked")
+            assert menu.count('aria-current="page"') == 1, path
+            assert "data-menu-toggle" in page and 'aria-controls="site-nav"' in page      # the button that opens it on a phone
+            assert "/provider" not in menu and "/admin" not in menu and "/partner" not in menu
+
+
+def test_the_menu_lists_the_pitch_deck_only_when_there_is_one(tmp_path):
+    with make(storage_dir=str(tmp_path)) as c:
+        assert "Pitch deck" not in menu_of(c.get("/overview").text)
+    put_deck(tmp_path)
+    with make(storage_dir=str(tmp_path)) as c:
+        assert 'href="/overview/deck"' in menu_of(c.get("/overview").text)
+        assert re.search(r'aria-current="page">\s*Pitch deck<', menu_of(c.get("/overview/deck").text))
+    with make(storage_dir=str(tmp_path / "none"), hub_deck_url="https://example.com/deck") as c:
+        assert 'href="https://example.com/deck" rel="noopener"' in menu_of(c.get("/overview").text)
+
+
+def test_the_stylesheet_address_changes_when_the_file_does_and_the_header_stays_in_view():
+    with make() as c:
+        page = c.get("/overview").text
+        assert re.search(r"/static/ci\.css\?v=\d+", page) and re.search(r"/static/ci\.js\?v=\d+", page)
+        assert 'class="site-header sticky"' in page
+        assert c.get("/static/ci.css").status_code == 200
+
+
+def test_the_demo_page_updates_without_jumping_back_to_the_top():
+    with make(demo_page_enabled=True) as c:
+        page = c.get("/demo").text
+        assert '<noscript><meta http-equiv="refresh"' in page and '<meta http-equiv="refresh"' not in page.replace('<noscript><meta http-equiv="refresh"', "")
+        assert "fetch(location.href" in page and "window.scrollTo(0, y)" in page
+
+
+def test_a_table_cell_with_code_in_it_stays_one_block_so_it_wraps_on_a_phone():
+    with make() as c:
+        assert '<span class="cell">' in c.get("/overview/findings").text
+
+
+def test_a_link_to_a_section_lands_below_the_sticky_header():
+    with make() as c:
+        css = c.get("/static/ci.css").text
+        assert "scroll-padding-top" in css and ".site-header.sticky" in css

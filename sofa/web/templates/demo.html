@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_ui.html" import chip, metric, rule, empty %}
 {% block title %}SOFA live demo{% endblock %}
-{% block head %}<meta http-equiv="refresh" content="{{ refresh }}">{% endblock %}
+{% block head %}<noscript><meta http-equiv="refresh" content="{{ refresh }}"></noscript>{% endblock %}
 
 {% block hero %}
 <section class="hero" aria-labelledby="demo-title">
@@ -62,4 +62,18 @@
 {% else %}
 {{ empty("No calls yet.", "Call the number above, or use the scenarios in section 04, and the call appears here as it happens.") }}
 {% endfor %}
+<script>
+/* The page keeps itself up to date without reloading: only the content is swapped, so the place you have scrolled to and an open menu stay as they are.
+   (Without JavaScript the page reloads itself instead.) */
+(function () {
+  var main = document.getElementById("main");
+  setInterval(function () {
+    if (document.hidden || document.querySelector(".nav.open")) { return; }
+    fetch(location.href, { credentials: "same-origin", cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (text) {
+      var fresh = new DOMParser().parseFromString(text, "text/html").getElementById("main");
+      if (fresh && main && fresh.innerHTML !== main.innerHTML) { var y = window.scrollY; main.innerHTML = fresh.innerHTML; window.scrollTo(0, y); }
+    }).catch(function () { /* offline for a moment: try again next time */ });
+  }, {{ refresh }} * 1000);
+})();
+</script>
 {% endblock %}

@@ -79,7 +79,7 @@ def markdown_to_html(md: str) -> str:
                 i += 1
             head, body = rows[0], [r for r in rows[2:]]
             th = "".join(f'<th scope="col">{inline(c)}</th>' for c in head)
-            trs = "".join("<tr>" + "".join(f'<td data-label="{html.escape(head[k] if k < len(head) else "", quote=True)}">{inline(c)}</td>' for k, c in enumerate(r)) + "</tr>" for r in body)
+            trs = "".join("<tr>" + "".join(f'<td data-label="{html.escape(head[k] if k < len(head) else "", quote=True)}"><span class="cell">{inline(c)}</span></td>' for k, c in enumerate(r)) + "</tr>" for r in body)
             out.append(f'<div class="tablewrap"><table class="responsive"><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table></div>')
         elif re.match(r"\d+\. ", line):
             items = []
@@ -96,32 +96,16 @@ def markdown_to_html(md: str) -> str:
     return "\n".join(out)
 
 
-DECK_SLIDE = re.compile(r"\d{1,3}\.jpg")
-
-
-def deck_dir(settings) -> Path:
-    return Path(settings.storage_dir).resolve() / "overview" / "deck"
-
-
-def deck_slides(settings) -> list[str]:
-    """The slide pictures (01.jpg, 02.jpg, ...) the team put in the deck folder on the server, in order. The deck is shown as pictures only, so a file
-    that could be edited or reused (a PowerPoint, a PDF) is never sent to a visitor."""
-    folder = deck_dir(settings)
-    if not folder.is_dir():
-        return []
-    return sorted((p.name for p in folder.iterdir() if p.is_file() and DECK_SLIDE.fullmatch(p.name)), key=lambda n: int(n.split(".")[0]))
-
-
 def deck_titles(settings, count: int) -> list[str]:
     """One line per slide from titles.txt in the deck folder, used as the slide's description for screen readers; 'Slide n' where a line is missing."""
-    path = deck_dir(settings) / "titles.txt"
+    path = ui.deck_dir(settings) / "titles.txt"
     lines = [l.strip() for l in path.read_text(encoding="utf-8").splitlines() if l.strip()] if path.is_file() else []
     return [lines[i] if i < len(lines) else f"Slide {i + 1}" for i in range(count)]
 
 
 def context(request: Request, **extra) -> dict:
     s = request.app.state.svc.settings
-    deck = len(deck_slides(s))
+    deck = len(ui.deck_slides(s))
     return {"request": request, "brand": "Talk", "footer_kind": "naic", "home_url": "/overview", "active": "", "s": s, "deck": deck,
             "story": video_embed(s.hub_story_video_url), "demo": video_embed(s.hub_demo_video_url),
             "has_watch": bool(s.hub_story_video_url or s.hub_demo_video_url or s.hub_audio_url or deck), "demo_page": s.demo_page_enabled, **extra}
@@ -156,7 +140,7 @@ NO_COPY = {"Cache-Control": "private, no-store", "Content-Disposition": "inline"
 def deck(request: Request, _=Depends(enabled)):
     """The pitch deck as a slide viewer: pictures only, nothing to download."""
     s = request.app.state.svc.settings
-    slides = deck_slides(s)
+    slides = ui.deck_slides(s)
     if not slides:
         raise HTTPException(404)
     return templates.TemplateResponse(request, "overview_deck.html", context(request, urls=[f"/overview/deck/{n}" for n in slides], titles=deck_titles(s, len(slides))),
@@ -167,8 +151,8 @@ def deck(request: Request, _=Depends(enabled)):
 def deck_slide(name: str, request: Request, _=Depends(enabled)):
     """One slide picture. The browser asks for it as an image inside the viewer; a slide address opened on its own in a tab is refused, and the
     answer says not to keep a copy. Anyone can still take a screenshot, but no editable file or full-quality original is ever sent."""
-    path = deck_dir(request.app.state.svc.settings) / name
-    if not DECK_SLIDE.fullmatch(name) or not path.is_file() or request.headers.get("sec-fetch-dest") == "document":
+    path = ui.deck_dir(request.app.state.svc.settings) / name
+    if not ui.DECK_SLIDE.fullmatch(name) or not path.is_file() or request.headers.get("sec-fetch-dest") == "document":
         raise HTTPException(404)
     return FileResponse(path, media_type="image/jpeg", headers=NO_COPY)
 

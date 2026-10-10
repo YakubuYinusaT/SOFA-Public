@@ -8,30 +8,42 @@
 <link rel="icon" href="/static/ci-mark-red.png" type="image/png">
 <link rel="preload" href="/static/fonts/poppins-300.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/fonts/poppins-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/static/ci.css">
+<link rel="stylesheet" href="/static/ci.css?v={{ asset_v }}">
 <script>try{var t=localStorage.getItem("ci-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
-<script src="/static/ci.js" defer></script>
+<script src="/static/ci.js?v={{ asset_v }}" defer></script>
 {% block head %}{% endblock %}
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to main content</a>
-<header class="site-header">
+{% set kind = footer_kind|default("internal") %}
+{% set console = active is defined and active != "" %}
+{% set site = [] if console else site_nav(kind, request) %}
+{% set back = site_home(kind, request) if console else none %}
+<header class="site-header{{ ' sticky' if kind != 'internal' else '' }}">
   <div class="frame"><div class="bar">
     <a class="brand" href="{{ home_url|default('/admin/home') }}" aria-label="{{ brand|default('SOFA admin') }}: home">
       <img src="/static/ci-mark-red.png" width="52" height="26" alt="">
       <span><span class="name">{{ brand|default("SOFA admin") }}</span><span class="by">by Connected Intelligence</span></span>
     </a>
-    {% if active is defined and active != "" %}
+    {% if site %}
+    <button class="menu-toggle ghost small" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav class="nav" id="site-nav" aria-label="Pages of this site">
+      {% for label, href, here in site %}
+        <a href="{{ href }}"{% if here %} aria-current="page"{% endif %}{% if not href.startswith('/') %} rel="noopener"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    {% elif console %}
     <button class="menu-toggle ghost small" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-nav">Menu</button>
     <nav class="nav" id="site-nav" aria-label="Console sections">
       {% for key, label, href in nav_items|default([("home","Home","/admin/home"),("dashboard","Dashboard","/admin"),("merchants","Merchants","/admin/merchants"),("orders","Orders","/admin/orders"),("handoffs","Handoffs","/admin/handoffs"),("calls","Calls","/admin/calls"),("label","Label","/admin/label"),("metrics","Metrics","/admin/metrics"),("languages","Languages","/admin/languages")]) %}
         <a href="{{ href }}" {% if active == key %}aria-current="page"{% endif %}>{{ label }}</a>
       {% endfor %}
+      {% if back %}<a href="{{ back[1] }}">{{ back[0] }}</a>{% endif %}
     </nav>
     {% endif %}
     <div class="tools">
       {% if footer_kind|default("internal") == "internal" %}<a class="btn ghost small" href="/admin/home">Admin home</a>{% endif %}
-      <button class="ghost small" type="button" data-theme-toggle aria-pressed="false" title="Switch between the dark theme (Ink) and the light theme (Paper)">Switch theme</button>
+      <button class="ghost small" type="button" data-theme-toggle aria-pressed="false" title="Switch between the dark theme (Ink) and the light theme (Paper)" aria-label="Switch between the dark theme and the light theme">Theme</button>
       {% if active is defined and active != "" %}
       <form class="inline" method="post" action="{{ logout_url|default('/admin/logout') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost small">Log out</button></form>
       {% endif %}

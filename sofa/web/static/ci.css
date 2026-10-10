@@ -116,13 +116,28 @@ main > h3 { margin: var(--space-6) 0 var(--space-3); }
 .nav a:hover { color: var(--text-primary); }
 .nav a[aria-current="page"] { color: var(--text-primary); border-bottom-color: var(--signal); } /* the one place red marks position rather than something live */
 @media (min-width: 1500px) { .nav { order: 2; flex-basis: auto; border-top: 0; } .bar .tools { order: 3; } }
+/* the header stays at the top of the screen while a page is read, so the menu is always one tap away (on a laptop-sized window the menu is a second row, so the header then scrolls away) */
+.site-header.sticky { position: sticky; top: 0; }
+html { scroll-padding-top: var(--space-9); } /* a link to a place further down the page lands below the header, not under it */
+@media (min-width: 1024px) and (max-width: 1499px) { .site-header.sticky { position: relative; } }
 @media (max-width: 1023px) {
-  .bar .tools { order: 4; flex-basis: 100%; margin-left: 0; flex-wrap: wrap; padding-bottom: var(--space-3); }
-  .menu-toggle { margin-left: auto; }
+  .site-header.sticky { max-height: 100vh; overflow-y: auto; }
+  .site-header .bar { flex-wrap: wrap; row-gap: 0; }
+  .brand { flex: 1 1 auto; min-width: 0; }
+  .bar .tools { order: 2; flex: none; margin-left: 0; flex-wrap: nowrap; padding-bottom: 0; }
+  .menu-toggle { order: 3; margin-left: 0; }
   .js .menu-toggle { display: inline-flex; }
+  .nav { order: 4; }
   .js .nav { display: none; flex-direction: column; align-items: stretch; gap: 0; padding-bottom: var(--space-3); }
   .js .nav.open { display: flex; }
   .nav a { border-bottom: 1px solid var(--border-hairline); }
+  .nav a[aria-current="page"] { border-bottom-color: var(--border-hairline); box-shadow: inset 3px 0 0 var(--signal); padding-left: var(--space-3); }
+}
+/* a small phone: the line under the name goes, and the buttons shrink, so the name, the theme button and the menu button fit on one row */
+@media (max-width: 479px) {
+  .brand .by { display: none; }
+  .bar .tools button.small, .bar .tools .btn.small { padding: 0 var(--space-3); }
+  .site-header .bar { gap: var(--space-2) var(--space-3); }
 }
 
 /* ---- buttons: three ranks and one shape ---- */
@@ -174,6 +189,8 @@ table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 22
 th { background: var(--surface-sunken); font-size: 11px; line-height: 14px; letter-spacing: 2.4px; text-transform: uppercase; font-weight: 600; color: var(--text-muted); text-align: left; padding: var(--space-3); white-space: nowrap; }
 td { padding: var(--space-3); border-top: 1px solid var(--border-hairline); vertical-align: top; color: var(--text-secondary); }
 td b, td strong { color: var(--text-primary); font-weight: 600; }
+code { overflow-wrap: anywhere; }
+td .cell { min-width: 0; overflow-wrap: anywhere; } /* a cell that mixes words with bold or code stays one block of text when the table becomes cards */
 tbody tr:hover td { background: var(--surface-sunken); }
 caption { text-align: left; padding: var(--space-3); color: var(--text-muted); font-size: 12px; }
 td.empty, .empty-state { color: var(--text-muted); font-style: normal; }
