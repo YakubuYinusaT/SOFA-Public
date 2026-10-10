@@ -2,17 +2,16 @@
 {% block title %}Merchants · SOFA admin{% endblock %}
 {% block body %}
 <h1>Merchants</h1>
-<div class="tablewrap"><table>
-  <tr><th>Business</th><th>Number customers dial</th><th>Owner</th><th>Language</th><th>Payment</th><th>Products</th><th>Status</th><th></th></tr>
+<div class="tablewrap"><table class="responsive stack"><thead><tr><th>Business</th><th>Number customers dial</th><th>Owner</th><th>Language</th><th>Payment</th><th>Products</th><th>Status</th><th></th></tr></thead><tbody>
   {% for r in rows %}<tr>
-    <td><a href="/admin/merchants/{{ r.m.id }}">{{ r.m.name }}</a><br><span class="muted small">{{ r.m.category }}</span></td>
-    <td>{{ r.numbers|join(", ") or "none yet" }}</td>
-    <td>{% if r.owner %}{{ r.owner.name }}<br><span class="muted small">{{ r.owner.phone }}</span>{% endif %}</td>
-    <td>{{ r.m.default_language }}</td><td>{{ r.m.payment_mode|replace("_", " ") }}</td><td>{{ r.products }}</td>
-    <td><span class="pill {{ 'ok' if r.m.status == 'active' else 'warn' }}">{{ r.m.status }}</span></td>
-    <td><a href="/admin/merchants/{{ r.m.id }}/products">catalog</a></td></tr>
+    <td data-label="Business"><a href="/admin/merchants/{{ r.m.id }}">{{ r.m.name }}</a><br><span class="muted small">{{ r.m.category }}</span></td>
+    <td data-label="Number customers dial">{{ r.numbers|join(", ") or "none yet" }}</td>
+    <td data-label="Owner">{% if r.owner %}{{ r.owner.name }}<br><span class="muted small">{{ r.owner.phone }}</span>{% endif %}</td>
+    <td data-label="Language">{{ r.m.default_language }}</td><td data-label="Payment">{{ r.m.payment_mode|replace("_", " ") }}</td><td data-label="Products">{{ r.products }}</td>
+    <td data-label="Status"><span class="pill {{ 'ok' if r.m.status == 'active' else 'warn' }}">{{ r.m.status }}</span></td>
+    <td data-label=""><a href="/admin/merchants/{{ r.m.id }}/products">catalog</a></td></tr>
   {% else %}<tr><td colspan="8" class="muted">No merchants yet. Add the first one below.</td></tr>{% endfor %}
-</table></div>
+</tbody></table></div>
 
 <h2>Add a merchant</h2>
 <form class="card" method="post" action="/admin/merchants">

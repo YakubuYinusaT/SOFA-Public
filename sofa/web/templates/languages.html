@@ -4,12 +4,11 @@
 <h1>Languages and translations</h1>
 <p class="muted">Sofa's English wording is written in the code. The other languages come from a translator's spreadsheet. Any phrase without a translation is spoken in English, in the English voice, so a caller never hears English read by a Yoruba voice.</p>
 
-<div class="tablewrap"><table>
-  <tr><th>Language</th><th>Phrases translated</th><th style="width:30%"></th><th>Still missing</th></tr>
-  {% for r in rows %}<tr><td>{{ r.name }}</td><td>{{ r.done }} / {{ r.total }}</td>
-    <td><div class="bar2"><i style="width:{{ (100 * r.done / r.total) if r.total else 0 }}%"></i></div></td>
-    <td class="small">{% if r.n_missing %}{{ r.missing|join(", ") }}{% if r.n_missing > r.missing|length %} and {{ r.n_missing - r.missing|length }} more{% endif %}{% else %}<span class="pill ok">complete</span>{% endif %}</td></tr>{% endfor %}
-</table></div>
+<div class="tablewrap"><table class="responsive stack"><thead><tr><th>Language</th><th>Phrases translated</th><th style="width:30%"></th><th>Still missing</th></tr></thead><tbody>
+  {% for r in rows %}<tr><td data-label="Language">{{ r.name }}</td><td data-label="Phrases translated">{{ r.done }} / {{ r.total }}</td>
+    <td data-label=""><div class="bar2"><i style="width:{{ (100 * r.done / r.total) if r.total else 0 }}%"></i></div></td>
+    <td class="small" data-label="Still missing">{% if r.n_missing %}{{ r.missing|join(", ") }}{% if r.n_missing > r.missing|length %} and {{ r.n_missing - r.missing|length }} more{% endif %}{% else %}<span class="pill ok">complete</span>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
 
 <div class="row" style="margin-top:14px">
   <div class="card"><h3>1. Send the sheet to your translator</h3>

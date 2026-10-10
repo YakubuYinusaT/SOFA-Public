@@ -7,13 +7,12 @@
   <label class="inline"><input type="checkbox" name="tests" value="1" {{ 'checked' if tests }}> include team test calls</label>
   <button>Filter</button>
 </form>
-<div class="tablewrap"><table>
-  <tr><th>Started (Lagos)</th><th>Merchant</th><th>Caller</th><th>Lang</th><th>Turns</th><th>Outcome</th><th></th></tr>
+<div class="tablewrap"><table class="responsive stack"><thead><tr><th>Started (Lagos)</th><th>Merchant</th><th>Caller</th><th>Lang</th><th>Turns</th><th>Outcome</th><th></th></tr></thead><tbody>
   {% for c in rows %}<tr>
-    <td>{{ c.started_at|lagos }}</td><td>{{ merchants.get(c.merchant_id, "") }}</td><td>{{ c.from_number }} {% if c.is_test %}<span class="pill">test</span>{% endif %}</td>
-    <td>{{ c.language or "" }}</td><td>{{ c.turns|length }}</td>
-    <td>{{ c.outcome or "in progress" }} {% if c.handoff_id %}<span class="pill warn">handoff</span>{% endif %}</td>
-    <td><a href="/admin/calls/{{ c.id }}">open</a></td></tr>
+    <td data-label="Started (Lagos)">{{ c.started_at|lagos }}</td><td data-label="Merchant">{{ merchants.get(c.merchant_id, "") }}</td><td data-label="Caller">{{ c.from_number }} {% if c.is_test %}<span class="pill">test</span>{% endif %}</td>
+    <td data-label="Lang">{{ c.language or "" }}</td><td data-label="Turns">{{ c.turns|length }}</td>
+    <td data-label="Outcome">{{ c.outcome or "in progress" }} {% if c.handoff_id %}<span class="pill warn">handoff</span>{% endif %}</td>
+    <td data-label=""><a href="/admin/calls/{{ c.id }}">open</a></td></tr>
   {% else %}<tr><td colspan="7" class="muted">No calls.</td></tr>{% endfor %}
-</table></div>
+</tbody></table></div>
 {% endblock %}

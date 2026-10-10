@@ -3,8 +3,11 @@
 import re
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from scripts.seed import seed
+from sofa.main import create_app
 from sofa.models import Call, Handoff, Merchant, Order, Product, ShopAdvice
 from sofa.services import advice
 from sofa.web import auth
@@ -174,3 +177,35 @@ def test_the_admin_login_opens_the_shop_portal_and_everything_in_it_works(client
 def test_the_shop_password_does_not_open_the_admin_console(client):
     login(client)
     assert client.get("/admin", follow_redirects=False).status_code == 303 and client.get("/admin/home", follow_redirects=False).status_code == 303
+
+
+@pytest.fixture
+def open_app(settings):
+    app = create_app(settings.model_copy(update={"vendor_open": True}))
+    seed(app.state.svc.session_factory)
+    return app
+
+
+def test_an_open_demo_portal_needs_no_password_and_still_works(open_app):
+    with TestClient(open_app) as c:
+        page = c.get("/vendor", follow_redirects=False)
+        assert page.status_code == 200 and "This portal is open for the demo" in page.text and "Log out" not in page.text
+        assert "demo password" not in page.text                                       # the warning about the default password has no point here
+        r = c.get("/vendor/login?next=/vendor/stock", follow_redirects=False)
+        assert r.status_code == 303 and r.headers["location"] == "/vendor/stock"      # the login page is skipped
+        r = post(c, "/vendor/stock", {"name": "Neem Oil", "unit": "bottle", "price_naira": "2500", "stock_qty": "30", "category": "agrochemical", "aliases": "neem"}, page="/vendor/stock")
+        assert "msg=" in r.headers["location"]                                        # a form works: the portal is usable, not just viewable
+        assert c.post("/vendor/stock", data={"name": "X", "unit": "bottle", "price_naira": "1"}, follow_redirects=False).status_code == 403   # a post still needs its form token
+
+
+def test_opening_the_shop_portal_opens_nothing_else(open_app):
+    with TestClient(open_app) as c:
+        for path in ("/admin", "/admin/orders", "/admin/merchants", "/provider"):
+            r = c.get(path, follow_redirects=False)
+            assert r.status_code in (303, 404), path
+            assert r.status_code == 404 or "/login" in r.headers["location"], path
+
+
+def test_the_portal_is_closed_unless_a_deployment_opens_it(client):
+    assert client.get("/vendor", follow_redirects=False).status_code == 303
+    assert "open for the demo" not in client.get("/vendor/login").text

@@ -12,14 +12,13 @@
 </div>
 
 <h2>Recent calls</h2>
-<div class="tablewrap"><table>
-  <tr><th>Started (Lagos)</th><th>Merchant</th><th>Language</th><th>Outcome</th><th>Test</th><th></th></tr>
+<div class="tablewrap"><table class="responsive stack"><thead><tr><th>Started (Lagos)</th><th>Merchant</th><th>Language</th><th>Outcome</th><th>Test</th><th></th></tr></thead><tbody>
   {% for c in recent %}<tr>
-    <td>{{ c.started_at|lagos }}</td><td>{{ merchants.get(c.merchant_id, "") }}</td><td>{{ c.language or "" }}</td>
-    <td>{{ c.outcome or "in progress" }}</td><td>{% if c.is_test %}<span class="pill">test</span>{% endif %}</td>
-    <td><a href="/admin/calls/{{ c.id }}">open</a></td></tr>
+    <td data-label="Started (Lagos)">{{ c.started_at|lagos }}</td><td data-label="Merchant">{{ merchants.get(c.merchant_id, "") }}</td><td data-label="Language">{{ c.language or "" }}</td>
+    <td data-label="Outcome">{{ c.outcome or "in progress" }}</td><td data-label="Test">{% if c.is_test %}<span class="pill">test</span>{% endif %}</td>
+    <td data-label=""><a href="/admin/calls/{{ c.id }}">open</a></td></tr>
   {% else %}<tr><td colspan="6" class="muted">No calls yet.</td></tr>{% endfor %}
-</table></div>
+</tbody></table></div>
 
 <div class="row" style="margin-top:14px">
   <div class="card"><h3>What callers asked for that we did not have</h3>

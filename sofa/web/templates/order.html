@@ -19,20 +19,18 @@
 </div>
 
 <h2>Items</h2>
-<div class="tablewrap"><table>
-  <tr><th>Product</th><th>Quantity</th><th class="right">Unit price</th><th class="right">Line</th><th>Customer said</th></tr>
-  {% for i in o.items %}<tr><td>{{ i.product.name }}</td><td>{{ i.qty }} {{ i.unit }}</td><td class="right">{{ i.unit_price_kobo|naira }}</td>
-    <td class="right">{{ (i.qty * i.unit_price_kobo)|naira }}</td><td class="muted">{{ i.spoken_name or "" }}</td></tr>{% endfor %}
-  <tr><th colspan="3" class="right">Total</th><th class="right">{{ o.total_kobo|naira }}</th><th></th></tr>
-</table></div>
+<div class="tablewrap"><table class="responsive stack"><thead><tr><th>Product</th><th>Quantity</th><th class="right">Unit price</th><th class="right">Line</th><th>Customer said</th></tr></thead><tbody>
+  {% for i in o.items %}<tr><td data-label="Product">{{ i.product.name }}</td><td data-label="Quantity">{{ i.qty }} {{ i.unit }}</td><td class="right" data-label="Unit price">{{ i.unit_price_kobo|naira }}</td>
+    <td class="right" data-label="Line">{{ (i.qty * i.unit_price_kobo)|naira }}</td><td class="muted" data-label="Customer said">{{ i.spoken_name or "" }}</td></tr>{% endfor %}
+  <tr><td colspan="3" class="right desktop-only"><b>Total</b></td><td class="right" data-label="Total"><b>{{ o.total_kobo|naira }}</b></td><td class="desktop-only" data-label="Product"></td></tr>
+</tbody></table></div>
 
 {% if calls_out %}<h2>Status calls to the customer</h2>
-<div class="tablewrap"><table>
-  <tr><th>About</th><th>State</th><th>Tries</th><th>Note</th></tr>
-  {% for c in calls_out %}<tr><td>{{ c.trigger|replace("_", " ") }}</td>
-    <td><span class="pill {{ 'ok' if c.status == 'answered' else 'warn' }}">{{ c.status|replace("_", " ") }}</span></td>
-    <td>{{ c.attempt }}</td><td class="muted small">{{ c.last_error or "" }}{% if c.call_id %} <a href="/admin/calls/{{ c.call_id }}">the call</a>{% endif %}</td></tr>{% endfor %}
-</table></div>
+<div class="tablewrap"><table class="responsive stack"><thead><tr><th>About</th><th>State</th><th>Tries</th><th>Note</th></tr></thead><tbody>
+  {% for c in calls_out %}<tr><td data-label="About">{{ c.trigger|replace("_", " ") }}</td>
+    <td data-label="State"><span class="pill {{ 'ok' if c.status == 'answered' else 'warn' }}">{{ c.status|replace("_", " ") }}</span></td>
+    <td data-label="Tries">{{ c.attempt }}</td><td class="muted small" data-label="Note">{{ c.last_error or "" }}{% if c.call_id %} <a href="/admin/calls/{{ c.call_id }}">the call</a>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
 {% endif %}
 
 {% if invoices %}<h2>Invoice and payments</h2>

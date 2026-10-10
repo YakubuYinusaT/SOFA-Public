@@ -19,6 +19,7 @@ from fastapi import HTTPException, Request
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 MAX_AGE = 8 * 3600
+OPENABLE = {"vendor": "vendor_open"}  # the consoles a demo server may open with no password, and the setting that does it: only the shop owner portal, never the admin console or the bank desk
 MAX_FAILURES, FAILURE_WINDOW = 10, 15 * 60
 _failures: dict[str, list[float]] = defaultdict(list)
 
@@ -31,6 +32,7 @@ class LoginRequired(Exception):
 class Portal:
     def __init__(self, scope: str, token_setting: str, admin_opens: bool = False):
         self.scope, self.token_setting = scope, token_setting
+        self.open_setting = OPENABLE.get(scope, "")  # the setting that, when true, lets anyone in with no password
         self.admin_opens = admin_opens  # the team's admin login also opens this console, so the admin never types a second password
         # The cookie is sent site-wide so the master page can show which consoles you are logged into; each console has its own cookie name and its own signing key,
         # so a login to one never opens another.
@@ -69,6 +71,9 @@ class Portal:
         except (BadSignature, SignatureExpired):
             return None
 
+    def is_open(self, request: Request) -> bool:
+        return bool(self.open_setting) and bool(getattr(request.app.state.svc.settings, self.open_setting, False))
+
     def access(self, request: Request) -> tuple[str, dict] | None:
         """How the caller may enter this console: ("own", session) with its own password, ("admin", session) as the admin, or None."""
         own = self._own(request)
@@ -78,6 +83,8 @@ class Portal:
             via = admin._own(request)
             if via:
                 return "admin", via  # the admin session's csrf token is the one the pages render and the posts check
+        if self.is_open(request):  # an open demo portal: no password, one shared session (its form token is derived from the server's own secret)
+            return "open", {"csrf": hmac.new(self.token(request).encode(), f"open-{self.scope}-portal".encode(), "sha256").hexdigest()[:32]}
         return None
 
     def session(self, request: Request) -> dict:

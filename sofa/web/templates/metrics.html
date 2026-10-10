@@ -17,30 +17,28 @@
 </div>
 
 <h2>Accuracy by language (labelled turns)</h2>
-<div class="tablewrap"><table>
-  <tr><th>Language</th><th>Labelled turns</th><th>Word error rate</th><th>Intent accuracy</th><th>Product match accuracy</th><th>Code-mixed</th></tr>
-  {% for r in m.by_language %}<tr><td>{{ r.language }}</td><td>{{ r.labelled_turns }}</td>
-    <td>{{ ("%.0f%%"|format(r.wer_mean * 100)) if r.wer_mean is not none else "n/a" }} <span class="muted small">(n={{ r.wer_sample }})</span></td>
-    <td>{{ pct(r.intent_accuracy) }} <span class="muted small">(n={{ r.intent_sample }})</span></td>
-    <td>{{ pct(r.match_accuracy) }} <span class="muted small">(n={{ r.match_sample }})</span></td>
-    <td>{{ r.code_mixed }} of {{ r.labelled_turns }}</td></tr>
+<div class="tablewrap"><table class="responsive stack"><thead><tr><th>Language</th><th>Labelled turns</th><th>Word error rate</th><th>Intent accuracy</th><th>Product match accuracy</th><th>Code-mixed</th></tr></thead><tbody>
+  {% for r in m.by_language %}<tr><td data-label="Language">{{ r.language }}</td><td data-label="Labelled turns">{{ r.labelled_turns }}</td>
+    <td data-label="Word error rate">{{ ("%.0f%%"|format(r.wer_mean * 100)) if r.wer_mean is not none else "n/a" }} <span class="muted small">(n={{ r.wer_sample }})</span></td>
+    <td data-label="Intent accuracy">{{ pct(r.intent_accuracy) }} <span class="muted small">(n={{ r.intent_sample }})</span></td>
+    <td data-label="Product match accuracy">{{ pct(r.match_accuracy) }} <span class="muted small">(n={{ r.match_sample }})</span></td>
+    <td data-label="Code-mixed">{{ r.code_mixed }} of {{ r.labelled_turns }}</td></tr>
   {% else %}<tr><td colspan="6" class="muted">Nothing labelled yet: use the Label page.</td></tr>{% endfor %}
-</table></div>
+</tbody></table></div>
 
 <h2>Does it improve? First calls against latest calls</h2>
 {% if m.early_vs_late %}{% set e = m.early_vs_late %}
-<div class="tablewrap"><table>
-  <tr><th></th><th>First {{ e.window }} calls</th><th>Last {{ e.window }} calls</th></tr>
-  <tr><td>Task completion</td><td>{{ pct(e.first.task_completion_rate) }}</td><td>{{ pct(e.last.task_completion_rate) }}</td></tr>
-  <tr><td>Handoff rate</td><td>{{ pct(e.first.handoff_rate) }}</td><td>{{ pct(e.last.handoff_rate) }}</td></tr>
-  <tr><td>Clarification rate</td><td>{{ pct(e.first.clarification_rate) }}</td><td>{{ pct(e.last.clarification_rate) }}</td></tr>
-  <tr><td>Median latency</td><td>{{ e.first.median_latency_ms|round(0) if e.first.median_latency_ms else "n/a" }} ms</td><td>{{ e.last.median_latency_ms|round(0) if e.last.median_latency_ms else "n/a" }} ms</td></tr>
-</table></div>{% if e.note %}<p class="muted small">{{ e.note }}</p>{% endif %}
+<div class="tablewrap"><table class="responsive stack"><thead><tr><th></th><th>First {{ e.window }} calls</th><th>Last {{ e.window }} calls</th></tr></thead><tbody>
+  <tr><td data-label="">Task completion</td><td data-label="First {{ e.window }} calls">{{ pct(e.first.task_completion_rate) }}</td><td data-label="Last {{ e.window }} calls">{{ pct(e.last.task_completion_rate) }}</td></tr>
+  <tr><td data-label="">Handoff rate</td><td data-label="First {{ e.window }} calls">{{ pct(e.first.handoff_rate) }}</td><td data-label="Last {{ e.window }} calls">{{ pct(e.last.handoff_rate) }}</td></tr>
+  <tr><td data-label="">Clarification rate</td><td data-label="First {{ e.window }} calls">{{ pct(e.first.clarification_rate) }}</td><td data-label="Last {{ e.window }} calls">{{ pct(e.last.clarification_rate) }}</td></tr>
+  <tr><td data-label="">Median latency</td><td data-label="First {{ e.window }} calls">{{ e.first.median_latency_ms|round(0) if e.first.median_latency_ms else "n/a" }} ms</td><td data-label="Last {{ e.window }} calls">{{ e.last.median_latency_ms|round(0) if e.last.median_latency_ms else "n/a" }} ms</td></tr>
+</tbody></table></div>{% if e.note %}<p class="muted small">{{ e.note }}</p>{% endif %}
 {% else %}<p class="muted">Needs at least 6 real calls.</p>{% endif %}
 
 <h2>Real interactions per day</h2>
-<div class="tablewrap"><table><tr><th>Date</th><th>Interactions</th></tr>
-  {% for d in m.per_day %}<tr><td>{{ d.date }}</td><td>{{ d.real_interactions }}</td></tr>{% else %}<tr><td colspan="2" class="muted">None yet.</td></tr>{% endfor %}</table></div>
+<div class="tablewrap"><table class="responsive stack"><thead><tr><th>Date</th><th>Interactions</th></tr></thead><tbody>
+  {% for d in m.per_day %}<tr><td data-label="Date">{{ d.date }}</td><td data-label="Interactions">{{ d.real_interactions }}</td></tr>{% else %}<tr><td colspan="2" class="muted">None yet.</td></tr>{% endfor %}</tbody></table></div>
 
 <h2>Anonymised exports</h2>
 <div class="card">

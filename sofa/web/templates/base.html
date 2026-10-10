@@ -42,9 +42,9 @@
     </nav>
     {% endif %}
     <div class="tools">
-      {% if footer_kind|default("internal") == "internal" %}<a class="btn ghost small" href="/admin/home">Admin home</a>{% endif %}
+      {% if footer_kind|default("internal") == "internal" %}<a class="btn ghost small admin-home" href="/admin/home">Admin home</a>{% endif %}
       <button class="ghost small" type="button" data-theme-toggle aria-pressed="false" title="Switch between the dark theme (Ink) and the light theme (Paper)" aria-label="Switch between the dark theme and the light theme">Theme</button>
-      {% if active is defined and active != "" %}
+      {% if active is defined and active != "" and not open_portal|default(false) %}
       <form class="inline" method="post" action="{{ logout_url|default('/admin/logout') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost small">Log out</button></form>
       {% endif %}
     </div>
@@ -53,6 +53,7 @@
 {% block hero %}{% endblock %}
 <main id="main" class="frame">
   {% if default_password and active %}<div class="flash warn" role="status"><b>This console still uses the demo password.</b> Anyone who knows it can log in. Set a long random one (<code>ADMIN_TOKEN</code>, <code>PROVIDER_TOKEN</code> or <code>VENDOR_TOKEN</code>) before this is reachable from the internet.</div>{% endif %}
+  {% if open_portal|default(false) %}<div class="flash" role="note"><b>This portal is open for the demo.</b> No password is needed, and everyone who opens it sees and changes the same shop.</div>{% endif %}
   {% if msg %}<div class="flash ok" role="status">{{ msg }}</div>{% endif %}
   {% if err %}<div class="flash err" role="alert">{{ err }}</div>{% endif %}
   {% block body %}{% endblock %}

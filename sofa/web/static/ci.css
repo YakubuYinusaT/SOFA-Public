@@ -94,6 +94,7 @@ main > h2:not(.section-rule) { margin: var(--space-7) 0 var(--space-4); }
 main > h3 { margin: var(--space-6) 0 var(--space-3); }
 .cols { display: grid; gap: var(--space-5); grid-template-columns: 1fr; }
 @media (min-width: 768px) { .cols.two { grid-template-columns: repeat(2, 1fr); } .cols.three { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 599px) { .grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-4); } .stat { padding: var(--space-4); } } /* the figures sit two across on a phone, not in one long column */
 @media (min-width: 1024px) { .cols.three { grid-template-columns: repeat(3, 1fr); } .cols.four { grid-template-columns: repeat(4, 1fr); } }
 .grid { display: grid; gap: var(--space-5); grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: var(--space-5); }
 .row { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
@@ -138,6 +139,7 @@ html { scroll-padding-top: var(--space-9); } /* a link to a place further down t
   .brand .by { display: none; }
   .bar .tools button.small, .bar .tools .btn.small { padding: 0 var(--space-3); }
   .site-header .bar { gap: var(--space-2) var(--space-3); }
+  .bar .tools .admin-home { display: none; } /* the name at the left and the menu already lead there */
 }
 
 /* ---- buttons: three ranks and one shape ---- */
@@ -205,7 +207,12 @@ td.empty, .empty-state { color: var(--text-muted); font-style: normal; }
   table.responsive tr { border-top: 1px solid var(--border-hairline); padding: var(--space-3) 0; }
   table.responsive td { border: 0; padding: var(--space-1) var(--space-3); display: flex; gap: var(--space-4); justify-content: space-between; align-items: center; text-align: right; }
   table.responsive td::before { content: attr(data-label); flex: none; font-size: 11px; line-height: 14px; letter-spacing: 2.4px; text-transform: uppercase; font-weight: 600; color: var(--text-muted); text-align: left; }
+  /* the console tables: the label sits above its value, so a cell with several items (pills, a form, a long number) simply wraps */
+  table.responsive.stack td { display: block; text-align: left; overflow-wrap: anywhere; }
+  table.responsive.stack td::before { display: block; margin-bottom: var(--space-1); }
+  table.responsive.stack td input[type=number], table.responsive.stack td input[type=text] { max-width: 100%; }
   table.responsive td[data-label=""]::before { display: none; }
+  table.responsive td.desktop-only { display: none; } /* a cell that only keeps the columns lined up on a wide screen */
   table.responsive td .actions { justify-content: flex-end; }
   table.responsive td input[type=number], table.responsive td input[type=text] { max-width: 140px; }
   tbody tr:hover td { background: transparent; }

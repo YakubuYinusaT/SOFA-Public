@@ -458,3 +458,19 @@ def test_api_stock_patch_leaves_a_movement_and_api_export_needs_token(client, db
     assert db.scalar(select(StockMovement).where(StockMovement.product_id == p.id, StockMovement.delta == -50, StockMovement.source == "web"))
     assert client.get("/api/export/calls.csv").status_code == 401
     assert client.get("/api/export/calls.csv", headers=h).status_code == 200
+
+
+def test_every_admin_table_becomes_labelled_cards_on_a_phone(client, db, call):
+    """A table wider than a phone would have to be scrolled sideways: each admin table is marked to stack, and every data cell carries its column's name."""
+    call(SPEC_CONVERSATION, caller=MUSA)
+    login(client)
+    merchant = db.scalar(select(Merchant))
+    for path in ("/admin", "/admin/merchants", f"/admin/merchants/{merchant.id}/products", "/admin/orders", "/admin/handoffs", "/admin/calls", "/admin/metrics", "/admin/languages"):
+        html = client.get(path).text
+        tables = re.findall(r"<table[^>]*>", html)
+        assert tables, path
+        assert all('class="responsive stack"' in t for t in tables), (path, tables)
+        assert "<thead>" in html and ("data-label=" in html or "colspan=" in html), path   # a table with no rows yet shows its one empty-state line instead
+    order = db.scalar(select(Order))
+    page = client.get(f"/admin/orders/{order.id}").text
+    assert all('class="responsive stack"' in t for t in re.findall(r"<table[^>]*>", page)) and 'data-label="Total"' in page

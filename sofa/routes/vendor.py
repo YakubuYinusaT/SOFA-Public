@@ -53,7 +53,8 @@ def page(request: Request, name: str, sess: dict, active: str, m: Merchant, stat
     base = dict(request=request, csrf=sess["csrf"], active=active, attribution=ATTRIBUTION, company=COMPANY, m=m,
                 brand="Shop owner portal", nav_items=NAV, logout_url="/vendor/logout", base_path="/vendor", footer_kind="naic", home_url="/vendor",
                 msg=request.query_params.get("msg"), err=request.query_params.get("err"),
-                default_password=request.app.state.svc.settings.vendor_token == "dev-vendor-token")
+                open_portal=portal.is_open(request),
+                default_password=request.app.state.svc.settings.vendor_token == "dev-vendor-token" and not portal.is_open(request))
     base.update(ctx)
     return templates.TemplateResponse(request, name, base, status_code=status_code)
 

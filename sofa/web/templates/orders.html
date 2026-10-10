@@ -7,15 +7,14 @@
   <div><label>Merchant</label><select name="merchant"><option value="">all</option>{% for m in all_merchants %}<option value="{{ m.id }}" {{ 'selected' if m.id|string == merchant }}>{{ m.name }}</option>{% endfor %}</select></div>
   <button>Filter</button>
 </form>
-<div class="tablewrap"><table>
-  <tr><th>Placed</th><th>Merchant</th><th>Customer</th><th>Items</th><th class="right">Total</th><th>Status</th><th></th></tr>
+<div class="tablewrap"><table class="responsive stack"><thead><tr><th>Placed</th><th>Merchant</th><th>Customer</th><th>Items</th><th class="right">Total</th><th>Status</th><th></th></tr></thead><tbody>
   {% for r in rows %}<tr>
-    <td>{{ r.o.created_at|lagos }}</td><td>{{ r.merchant.name }}</td>
-    <td>{{ r.customer.name or "" }}<br><span class="muted small">{{ r.customer.phone }}</span></td>
-    <td>{{ r.lines }}<br><span class="muted small">{{ r.o.delivery_address or "" }}</span></td>
-    <td class="right">{{ r.o.total_kobo|naira }}</td>
-    <td><span class="pill {{ 'ok' if r.o.status in ('paid','delivered') else 'bad' if r.o.status == 'cancelled' else 'warn' }}">{{ r.o.status|replace("_", " ") }}</span></td>
-    <td><a href="/admin/orders/{{ r.o.id }}">open</a></td></tr>
+    <td data-label="Placed">{{ r.o.created_at|lagos }}</td><td data-label="Merchant">{{ r.merchant.name }}</td>
+    <td data-label="Customer">{{ r.customer.name or "" }}<br><span class="muted small">{{ r.customer.phone }}</span></td>
+    <td data-label="Items">{{ r.lines }}<br><span class="muted small">{{ r.o.delivery_address or "" }}</span></td>
+    <td class="right" data-label="Total">{{ r.o.total_kobo|naira }}</td>
+    <td data-label="Status"><span class="pill {{ 'ok' if r.o.status in ('paid','delivered') else 'bad' if r.o.status == 'cancelled' else 'warn' }}">{{ r.o.status|replace("_", " ") }}</span></td>
+    <td data-label=""><a href="/admin/orders/{{ r.o.id }}">open</a></td></tr>
   {% else %}<tr><td colspan="7" class="muted">No orders.</td></tr>{% endfor %}
-</table></div>
+</tbody></table></div>
 {% endblock %}

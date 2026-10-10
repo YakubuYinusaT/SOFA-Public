@@ -114,6 +114,7 @@ class Settings(BaseSettings):
     provider_bank: str = "demobank"  # which bank the /provider desk speaks for
     provider_token: str = "dev-provider-token"  # the bank desk portal (/provider): demo password, change it before the internet can reach this
     vendor_token: str = "dev-vendor-token"      # the shop owner portal (/vendor): same
+    vendor_open: bool = False  # a demo server only: anyone can use the shop owner portal with no password (VENDOR_OPEN=true in .env)
     quiet_hours: str = "21:00-07:00"
     test_caller_numbers: str = "+2348000000001"
     scheduler_enabled: bool = True  # background jobs: the 7 PM merchant report

@@ -6,29 +6,27 @@
   <a class="btn small {{ '' if status == 'open' else 'ghost' }}" href="/admin/handoffs?status=open">Open</a>
   <a class="btn small {{ '' if status == 'resolved' else 'ghost' }}" href="/admin/handoffs?status=resolved">Resolved</a>
 </p>
-<div class="tablewrap"><table>
-  <tr><th>Opened</th><th>Merchant</th><th>Why</th><th>What happened</th><th>Call</th><th>Resolve</th></tr>
+<div class="tablewrap"><table class="responsive stack"><thead><tr><th>Opened</th><th>Merchant</th><th>Why</th><th>What happened</th><th>Call</th><th>Resolve</th></tr></thead><tbody>
   {% for h in rows %}<tr>
-    <td>{{ h.created_at|lagos }}</td><td>{{ merchants.get(h.merchant_id, h.service_domain or "") }}</td>
-    <td><span class="pill warn">{{ h.reason|replace("_", " ") }}</span></td><td>{{ h.summary }}</td>
-    <td>{% if h.call_id %}<a href="/admin/calls/{{ h.call_id }}">open</a>{% endif %}</td>
-    <td><form method="post" action="/admin/handoffs/{{ h.id }}/resolve"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <td data-label="Opened">{{ h.created_at|lagos }}</td><td data-label="Merchant">{{ merchants.get(h.merchant_id, h.service_domain or "") }}</td>
+    <td data-label="Why"><span class="pill warn">{{ h.reason|replace("_", " ") }}</span></td><td data-label="What happened">{{ h.summary }}</td>
+    <td data-label="Call">{% if h.call_id %}<a href="/admin/calls/{{ h.call_id }}">open</a>{% endif %}</td>
+    <td data-label="Resolve"><form method="post" action="/admin/handoffs/{{ h.id }}/resolve"><input type="hidden" name="csrf" value="{{ csrf }}">
       {% if status == "open" %}<input type="text" name="resolved_by" placeholder="your name" style="width:120px"> <button class="small">Resolved</button>
       {% else %}<span class="muted small">by {{ h.resolved_by or "?" }}</span> <input type="hidden" name="reopen" value="1"><button class="small ghost">Reopen</button>{% endif %}
     </form></td></tr>
   {% else %}<tr><td colspan="6" class="muted">Nothing {{ status }}.</td></tr>{% endfor %}
-</table></div>
+</tbody></table></div>
 
 <h2>Payments that did not match an invoice</h2>
 <p class="muted small">A transfer arrived that is not exactly the amount of one open invoice (short, over, or two invoices of the same size). Look at the bank or Paystack dashboard, then apply it. Payments add up: a part payment leaves the invoice open.</p>
-<div class="tablewrap"><table>
-  <tr><th>Received</th><th>Amount</th><th>From</th><th>Customer</th><th>Apply to</th></tr>
+<div class="tablewrap"><table class="responsive stack"><thead><tr><th>Received</th><th>Amount</th><th>From</th><th>Customer</th><th>Apply to</th></tr></thead><tbody>
   {% for r in pay_rows %}<tr>
-    <td>{{ r.p.created_at|lagos }}</td><td>{{ r.p.amount_kobo|naira }}</td><td>{{ r.p.sender_name or "unknown" }}<br><span class="muted small">account {{ r.p.account_number }}</span></td>
-    <td>{% if r.customer %}{{ r.customer.name or "" }} {{ r.customer.phone }}{% else %}<span class="muted">unknown account</span>{% endif %}</td>
-    <td>{% if r.candidates %}<form method="post" action="/admin/payments/{{ r.p.id }}/apply"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <td data-label="Received">{{ r.p.created_at|lagos }}</td><td data-label="Amount">{{ r.p.amount_kobo|naira }}</td><td data-label="From">{{ r.p.sender_name or "unknown" }}<br><span class="muted small">account {{ r.p.account_number }}</span></td>
+    <td data-label="Customer">{% if r.customer %}{{ r.customer.name or "" }} {{ r.customer.phone }}{% else %}<span class="muted">unknown account</span>{% endif %}</td>
+    <td data-label="Apply to">{% if r.candidates %}<form method="post" action="/admin/payments/{{ r.p.id }}/apply"><input type="hidden" name="csrf" value="{{ csrf }}">
       <select name="invoice_id">{% for i in r.candidates %}<option value="{{ i.id }}">{{ i.reference }} · {{ i.amount_kobo|naira }}</option>{% endfor %}</select>
       <button class="small">Apply</button></form>{% else %}<span class="muted">no open invoice for this customer</span>{% endif %}</td></tr>
   {% else %}<tr><td colspan="5" class="muted">None.</td></tr>{% endfor %}
-</table></div>
+</tbody></table></div>
 {% endblock %}

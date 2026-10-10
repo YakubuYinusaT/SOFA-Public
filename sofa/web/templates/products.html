@@ -4,26 +4,25 @@
 <h1>{{ m.name }} catalog</h1>
 <p><a href="/admin/merchants/{{ m.id }}">&larr; merchant settings</a></p>
 
-<div class="tablewrap"><table>
-  <tr><th>Product</th><th>Price per unit</th><th>Stock</th><th>Active</th><th>Save</th><th>How customers ask for it (aliases)</th></tr>
+<div class="tablewrap"><table class="responsive stack"><thead><tr><th>Product</th><th>Price per unit</th><th>Stock</th><th>Active</th><th>Save</th><th>How customers ask for it (aliases)</th></tr></thead><tbody>
   {% for p in items %}
   <tr>
-    <td><b>{{ p.name }}</b><br><span class="muted small">{{ p.category or "" }} {{ p.size_label or "" }}</span>
+    <td data-label="Product"><b>{{ p.name }}</b><br><span class="muted small">{{ p.category or "" }} {{ p.size_label or "" }}</span>
       <form id="f-{{ p.id }}" method="post" action="/admin/merchants/{{ m.id }}/products/{{ p.id }}"><input type="hidden" name="csrf" value="{{ csrf }}"></form></td>
-    <td style="min-width:170px">
+    <td style="min-width:170px" data-label="Price per unit">
       <select name="unit" form="f-{{ p.id }}" style="width:auto">{% for u, price, per in unit_options(p) %}<option value="{{ u }}" {{ 'selected' if u == p.default_unit }}>{{ u }} ({{ (price / 100)|round(2) }})</option>{% endfor %}</select>
       <input type="number" name="price_naira" form="f-{{ p.id }}" step="0.01" min="0" placeholder="new price" style="width:110px"> <span class="small muted">naira</span>
       <div class="muted small">To change a price: pick the unit, type the new price. Leave empty to keep prices as they are.</div></td>
-    <td><input type="number" name="stock_qty" form="f-{{ p.id }}" min="0" value="{{ p.stock_qty }}" style="width:90px"><div class="muted small">{{ p.default_unit }}s</div></td>
-    <td><input type="checkbox" name="active" form="f-{{ p.id }}" {{ 'checked' if p.active }}></td>
-    <td><button class="small" form="f-{{ p.id }}">Save</button></td>
-    <td style="min-width:230px">
+    <td data-label="Stock"><input type="number" name="stock_qty" form="f-{{ p.id }}" min="0" value="{{ p.stock_qty }}" style="width:90px"><div class="muted small">{{ p.default_unit }}s</div></td>
+    <td data-label="Active"><input type="checkbox" name="active" form="f-{{ p.id }}" {{ 'checked' if p.active }}></td>
+    <td data-label="Save"><button class="small" form="f-{{ p.id }}">Save</button></td>
+    <td style="min-width:230px" data-label="How customers ask for it (aliases)">
       {% for a in p.aliases %}<span class="pill {{ 'ok' if a.source == 'merchant_correction' else '' }}" title="{{ a.source }}, confirmed {{ a.confirmations }}x">{{ a.phrase }}</span> {% endfor %}
       <form method="post" action="/admin/merchants/{{ m.id }}/products/{{ p.id }}/aliases" style="margin-top:5px"><input type="hidden" name="csrf" value="{{ csrf }}">
         <input type="text" name="phrase" placeholder="add a phrase" style="width:70%"> <button class="small ghost">Add</button></form></td>
   </tr>
   {% else %}<tr><td colspan="6" class="muted">No products yet. Import a CSV or add one below.</td></tr>{% endfor %}
-</table></div>
+</tbody></table></div>
 <p class="muted small"><b>Aliases:</b> add every way customers ask for an item: English, Yoruba, Pidgin, and mixed phrases. Callers mix languages in one sentence, and a shop's own words are the best matches. </p>
 <p class="muted small">Every stock change is recorded as a stock movement. Changing a price here also confirms large price changes that the owner could not make by voice.</p>
 
