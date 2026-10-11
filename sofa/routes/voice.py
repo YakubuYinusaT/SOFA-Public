@@ -24,7 +24,7 @@ from ..gateway import links
 from ..gateway.manager import GatewayManager
 from ..gateway.verification import digits_step
 from ..dialogue.templates import render, speak_lang
-from ..models import Call, CallTurn, Customer, CustomerProfile, LateReply, Merchant, MerchantUser, Order, OutboundCall, PhoneNumber
+from ..models import Call, CallTurn, Customer, CustomerProfile, LateReply, Merchant, MerchantUser, Notification, Order, OutboundCall, PhoneNumber
 from ..services import orders as order_svc
 from ..services import latereply
 from ..services import outbound as outbound_svc
@@ -670,4 +670,38 @@ async def events(secret: str, request: Request):
                 call.outcome = call.outcome or "ended"
                 db.commit()
         svc.sessions.delete(session_id)
+    return Response("ok")
+
+
+# What Africa's Talking reports about a text it accepted: Sent, Submitted and Buffered are on the way, Success is on the phone,
+# Failed and Rejected are not coming (the reason is in failureReason, e.g. the handset was off or the sender id was refused).
+SMS_REPORT_STATUS = {"success": "delivered", "failed": "failed", "rejected": "rejected", "buffered": "buffered", "sent": "sent", "submitted": "sent"}
+SMS_FINAL = ("delivered", "failed", "rejected")  # a late "Buffered" or "Sent" never undoes one of these
+
+
+@router.api_route("/sms/delivery/{secret}", methods=["GET", "HEAD"], include_in_schema=False)
+async def sms_delivery_reachable(secret: str, request: Request):
+    """Answers 200 to a plain visit, so the dashboard accepts the address (see `reachable`)."""
+    _check_secret(request, secret)
+    return Response(content="ok", media_type="text/plain")
+
+
+@router.post("/sms/delivery/{secret}")
+async def sms_delivery(secret: str, request: Request):
+    """A delivery report for one text: update the notification it belongs to, and log why when the text did not arrive."""
+    _check_secret(request, secret)
+    svc = request.app.state.svc
+    form = await request.form()
+    _log_fields("sms delivery", form)
+    message_id, reported = str(form.get("id", "")), str(form.get("status", "")).strip().lower()
+    status = SMS_REPORT_STATUS.get(reported)
+    if not message_id or not status:
+        return Response("ok")
+    if status in ("failed", "rejected"):
+        log.error("sms %s %s to ...%s: %s", message_id, reported, str(form.get("phoneNumber", ""))[-4:], form.get("failureReason") or "no reason given")
+    with svc.session_factory() as db:
+        row = db.scalar(select(Notification).where(Notification.provider_message_id == message_id))
+        if row and row.status not in SMS_FINAL:
+            row.status = status
+            db.commit()
     return Response("ok")
