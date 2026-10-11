@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "_media.html" import media %}
+{% block title %}The Talk demo video{% endblock %}
+
+{% block hero %}
+<section class="hero" aria-labelledby="v-title">
+  <div class="frame">
+    <p class="eyebrow">Demo video</p>
+    <h1 id="v-title">A call to Talk, from the first word to the order.</h1>
+    <p class="lede">The caller speaks, Talk finds the product and takes the order, and the shop owner sees it in their portal.</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block body %}
+{% if demo.kind %}
+<section class="card" aria-labelledby="v-play">
+  <p class="eyebrow">The demo</p><h3 id="v-play">A real call, start to finish</h3>
+  {{ media(demo, "The demo: a real call to Talk, start to finish", "A real call to Talk, and what the shop owner sees.", "Watch the demo") }}
+</section>
+{% if s.hub_story_video_url %}
+<section class="card" aria-labelledby="v-story">
+  <p class="eyebrow">The story</p><h3 id="v-story">The problem and what we built</h3>
+  {{ media(story, "The story: the problem and what we built", "A short talk on the problem and how Talk solves it.", "Watch the story") }}
+</section>
+{% endif %}
+{% else %}
+<section class="card" aria-labelledby="v-wait">
+  <p class="eyebrow">This page holds the demo</p>
+  <h3 id="v-wait">The demo video plays here</h3>
+  <p class="small">It follows one real call to Talk: the greeting, a question about the store, an order, the payment details by text message, and the order appearing in the shop owner's portal.</p>
+  <p class="small">The same call can be tried now, live.</p>
+  <div class="actions">
+    {% if s.hub_test_number %}<a class="btn" href="tel:{{ s.hub_test_number|replace(' ', '') }}">Call {{ s.hub_test_number }}</a>{% endif %}
+    {% if demo_page %}<a class="btn ghost" href="/demo">Live demo page</a>{% endif %}
+    {% if deck %}<a class="btn ghost" href="/overview/deck">Pitch deck</a>{% endif %}
+    <a class="btn ghost" href="/overview#test">How to test it by phone</a>
+  </div>
+</section>
+{% if s.hub_audio_url %}
+<section class="card"><p class="eyebrow">Listen</p><h3>The explainer</h3><p class="small">The problem and the solution, in our own voice.</p><audio controls preload="none" style="width:100%" src="{{ s.hub_audio_url }}"></audio></section>
+{% endif %}
+{% endif %}
+<p class="caption"><a href="/overview/technology">How it works in detail</a> · <a href="/overview/use-cases">Everything Talk can do</a>{% if s.hub_contact_email %} · <a href="mailto:{{ s.hub_contact_email }}">{{ s.hub_contact_email }}</a>{% endif %}</p>
+{% endblock %}

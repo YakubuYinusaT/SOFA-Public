@@ -198,3 +198,25 @@ def test_a_link_to_a_section_lands_below_the_sticky_header():
     with make() as c:
         css = c.get("/static/ci.css").text
         assert "scroll-padding-top" in css and ".site-header.sticky" in css
+
+
+def test_the_demo_video_page_exists_before_the_video_and_plays_it_once_there_is_one(tmp_path):
+    with make(storage_dir=str(tmp_path), hub_test_number="+2348000000000", demo_page_enabled=True) as c:
+        page = c.get("/overview/video")
+        assert page.status_code == 200 and "The demo video plays here" in page.text and "tel:+2348000000000" in page.text
+        assert "<video" not in page.text and "<iframe" not in page.text and "Watch and listen" not in c.get("/overview").text
+    # a YouTube link in the settings is embedded on the page, and on the home page
+    with make(storage_dir=str(tmp_path), hub_demo_video_url="https://youtu.be/abcdefghijk") as c:
+        assert "youtube-nocookie.com/embed/abcdefghijk" in c.get("/overview/video").text and "plays here" not in c.get("/overview/video").text
+        assert "youtube-nocookie.com/embed/abcdefghijk" in c.get("/overview").text
+    # copying a file called demo.mp4 into the overview folder is enough: no setting, no restart
+    (tmp_path / "overview").mkdir()
+    (tmp_path / "overview" / "demo.mp4").write_bytes(b" ftypmp42 a tiny test file")
+    with make(storage_dir=str(tmp_path)) as c:
+        page = c.get("/overview/video").text
+        assert '<video' in page and 'src="/overview/files/demo.mp4"' in page and "plays here" not in page
+        assert '<video' in c.get("/overview").text
+        assert c.get("/overview/files/demo.mp4").status_code == 200
+    # a setting wins over the file
+    with make(storage_dir=str(tmp_path), hub_demo_video_url="https://example.com/other.mp4") as c:
+        assert "https://example.com/other.mp4" in c.get("/overview/video").text

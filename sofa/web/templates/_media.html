@@ -1,0 +1,6 @@
+{# How a page shows a video: a file the page plays itself, a YouTube link embedded, or any other link as a button. #}
+{% macro media(m, title, note, button) -%}
+  {% if m.kind == "file" %}<video controls preload="metadata" style="width:100%;border-radius:var(--radius-sm)" aria-label="{{ title }}"><source src="{{ m.src }}"></video>
+  {% elif m.kind == "youtube" %}<iframe src="{{ m.src }}" title="{{ title }}" style="width:100%;aspect-ratio:16/9;border:0;border-radius:var(--radius-sm)" loading="lazy" allow="encrypted-media; picture-in-picture" allowfullscreen></iframe>
+  {% else %}<p class="small">{{ note }}</p><a class="btn" href="{{ m.src }}" rel="noopener">{{ button }}</a>{% endif %}
+{%- endmacro %}

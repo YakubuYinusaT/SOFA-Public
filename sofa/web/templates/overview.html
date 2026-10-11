@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_media.html" import media %}
 {% from "_ui.html" import rule, metric %}
 {% block title %}Talk, an AI agent that serves you over a phone call{% endblock %}
 
@@ -20,16 +21,11 @@
 {% block body %}
 
 {% set n = namespace(v=1) %}
-{% macro media(m, title, note, button) -%}
-  {% if m.kind == "file" %}<video controls preload="metadata" style="width:100%;border-radius:var(--radius-sm)" aria-label="{{ title }}"><source src="{{ m.src }}"></video>
-  {% elif m.kind == "youtube" %}<iframe src="{{ m.src }}" title="{{ title }}" style="width:100%;aspect-ratio:16/9;border:0;border-radius:var(--radius-sm)" loading="lazy" allow="encrypted-media; picture-in-picture" allowfullscreen></iframe>
-  {% else %}<p class="small">{{ note }}</p><a class="btn" href="{{ m.src }}" rel="noopener">{{ button }}</a>{% endif %}
-{%- endmacro %}
 {% if has_watch %}
 {{ rule(n.v, "Watch and listen") }}{% set n.v = n.v + 1 %}
 <div class="cols two">
   {% if s.hub_story_video_url %}<section class="card"><p class="eyebrow">The story</p><h3>The problem and what we built</h3>{{ media(story, "The story: the problem and what we built", "A short talk on the problem and how Talk solves it.", "Watch the story") }}</section>{% endif %}
-  {% if s.hub_demo_video_url %}<section class="card"><p class="eyebrow">The demo</p><h3>A call, from start to finish</h3>{{ media(demo, "The demo: a call from start to finish", "A real call to Talk, and what the shop owner sees.", "Watch the demo") }}</section>{% endif %}
+  {% if demo.kind %}<section class="card"><p class="eyebrow">The demo</p><h3>A call, from start to finish</h3>{{ media(demo, "The demo: a call from start to finish", "A real call to Talk, and what the shop owner sees.", "Watch the demo") }}</section>{% endif %}
   {% if deck %}<section class="card"><p class="eyebrow">Read</p><h3>The pitch deck</h3><p class="small">{{ deck }} slides: the problem, how Talk works, what already runs and where it goes next.</p><a class="btn" href="/overview/deck">View the deck</a></section>{% endif %}
   {% if s.hub_audio_url %}<section class="card"><p class="eyebrow">Listen</p><h3>The explainer</h3><p class="small">The problem and the solution, in our own voice.</p><audio controls preload="none" style="width:100%" src="{{ s.hub_audio_url }}"></audio></section>{% endif %}
 </div>

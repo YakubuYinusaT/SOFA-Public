@@ -103,17 +103,36 @@ def deck_titles(settings, count: int) -> list[str]:
     return [lines[i] if i < len(lines) else f"Slide {i + 1}" for i in range(count)]
 
 
+DEMO_FILES = ("demo.mp4", "demo.webm")
+
+
+def demo_video_url(settings) -> str:
+    """Where the demo video is: the address in the settings if there is one, otherwise a file named demo.mp4 (or demo.webm) the team put in the overview folder
+    on the server, so publishing the video is one file copy and the page that holds it (/overview/video) starts playing it at once."""
+    if settings.hub_demo_video_url:
+        return settings.hub_demo_video_url
+    folder = Path(settings.storage_dir).resolve() / "overview"
+    return next((f"/overview/files/{name}" for name in DEMO_FILES if (folder / name).is_file()), "")
+
+
 def context(request: Request, **extra) -> dict:
     s = request.app.state.svc.settings
     deck = len(ui.deck_slides(s))
+    demo_url = demo_video_url(s)
     return {"request": request, "brand": "Talk", "footer_kind": "naic", "home_url": "/overview", "active": "", "s": s, "deck": deck,
-            "story": video_embed(s.hub_story_video_url), "demo": video_embed(s.hub_demo_video_url),
-            "has_watch": bool(s.hub_story_video_url or s.hub_demo_video_url or s.hub_audio_url or deck), "demo_page": s.demo_page_enabled, **extra}
+            "story": video_embed(s.hub_story_video_url), "demo": video_embed(demo_url),
+            "has_watch": bool(s.hub_story_video_url or demo_url or s.hub_audio_url or deck), "demo_page": s.demo_page_enabled, **extra}
 
 
 @router.get("")
 def overview(request: Request, _=Depends(enabled)):
     return templates.TemplateResponse(request, "overview.html", context(request))
+
+
+@router.get("/video")
+def video(request: Request, _=Depends(enabled)):
+    """The page that holds the demo video: the address to give anyone who asks for it. It plays the video once there is one, and until then points to the rest of the evidence."""
+    return templates.TemplateResponse(request, "overview_video.html", context(request))
 
 
 @router.get("/technology")
