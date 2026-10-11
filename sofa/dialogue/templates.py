@@ -226,6 +226,15 @@ EN: dict[str, list[str]] = {
     "order_placed_transfer": [
         "Done. I've sent the account number to this phone by SMS. Once you pay, we'll call you back to confirm. Thank you, {name}."
     ],
+    # The account number is read aloud as well as texted, so a text that is late or never arrives does not stop the customer paying.
+    "order_placed_account": [
+        "Done. To pay, transfer to {bank_name}, account number {account_number}. I'll say it again: {account_number}. "
+        "I've sent the account number to this phone by SMS too. Once you pay, we'll call you back to confirm. Thank you, {name}."
+    ],
+    "order_placed_account_aloud": [
+        "Done. To pay, transfer to {bank_name}, account number {account_number}. I'll say it again: {account_number}. "
+        "Please write it down. Once you pay, we'll call you back to confirm. Thank you, {name}."
+    ],
     "order_placed_pod": ["Done. You will pay on delivery. Thank you, {name}."],
     "cancelled": ["Done, your order is cancelled."],
     "nothing_to_cancel": ["I can't find an order to cancel."],
@@ -438,6 +447,8 @@ CONTEXT: dict[str, str] = {
     "readback": "READ-BACK before placing the order: every item, the total and the address, then asks for a yes. This is the main protection against mistakes, so keep it clear.",
     "ask_change": "Caller said the read-back was wrong: asks what to change.",
     "order_placed_transfer": "Order placed; the customer will pay by bank transfer. Says the account number was sent by SMS and Sofa will phone back after payment.",
+    "order_placed_account": "Order placed; the customer pays by bank transfer. Reads out the bank and the account number (said twice, digit by digit) and says the number was also sent by SMS. Sofa will phone back after payment.",
+    "order_placed_account_aloud": "Order placed; the customer pays by bank transfer. Reads out the bank and the account number (said twice, digit by digit) and asks the customer to write it down, because the SMS could not be sent. Sofa will phone back after payment.",
     "order_placed_pod": "Order placed; the customer pays when the goods arrive.",
     "cancelled": "Confirms the order was cancelled.",
     "nothing_to_cancel": "Caller asked to cancel but there is no order.",
@@ -478,7 +489,7 @@ P1 = {
     "greet_returning_repeat", "consent", "ack", "word_and", "word_or", "repeat_prompt", "handoff",
     "ask_what", "ask_more", "added", "added_many", "clarify_variant", "clarify_unit", "clarify_unit_many",
     "clarify_quantity", "not_available", "out_of_stock", "avail_yes", "price_is", "ask_address",
-    "language_ask", "lang_name_en", "lang_name_yo", "readback", "order_placed_transfer", "order_placed_pod", "still_there", "goodbye_silence",
+    "language_ask", "lang_name_en", "lang_name_yo", "readback", "order_placed_transfer", "order_placed_account", "order_placed_account_aloud", "order_placed_pod", "still_there", "goodbye_silence",
     "track_status", "status_confirmed", "status_awaiting_payment", "status_paid", "status_dispatched",
     "status_delivered", "payment_paid", "payment_pending",
 }
@@ -489,6 +500,8 @@ PLACEHOLDER_HELP: dict[str, str] = {
     "languages": "the languages on offer, for example English or Yoruba (each name comes from the lang_name_* phrases)",
     "products": "a few product names joined with the word for 'and', for example Urea Fertilizer, NPK 15-15-15 Fertilizer and Hybrid Maize Seed. Keep each name as it is",
     "name": "the customer's first name, for example Musa",
+    "bank_name": "the bank that holds the account the customer pays into, for example Wema Bank. Keep it as it is",
+    "account_number": "the account number to pay into, already written as separate digits in short groups, for example 0 1 2, 3 4 5, 6 7 8 9. Keep it as it is",
     "answer": "the answer to a general question, already written in English from a web search, for example The capital of Ghana is Accra. Keep it as it is",
     "who": "a person's name as saved by the bank, for example Hauwa Bello",
     "people": "names joined with the word for 'or', for example Hauwa Bello or Hauwa Musa",
@@ -589,12 +602,23 @@ def render(key: str, lang: str, facts: dict, variant: int = 0) -> str:
 
 # Money and digits are spoken in English in every language: nearly everyone understands "ten thousand naira" the same way,
 # and it avoids a voice model mangling numbers it was not trained on. Names and ordinary words stay in the caller's language.
-VALUE_KEYS = {"amount", "balance", "limit", "line_total", "total", "price", "alt_price", "value", "last4", "number", "ref", "people", "date"}
+VALUE_KEYS = {"account_number", "amount", "balance", "limit", "line_total", "total", "price", "alt_price", "value", "last4", "number", "ref", "people", "date"}
 
 
 def spell_digits(digits: str) -> str:
     """'4321' -> '4 3 2 1': account and card digits are read one at a time."""
     return " ".join(str(digits))
+
+
+def read_digits(digits: str) -> str:
+    """'0123456789' -> '0 1 2, 3 4 5, 6 7 8 9': one digit at a time, in short groups with a pause between, so the listener can write them down."""
+    d = [c for c in str(digits) if c.isdigit()]
+    groups, i = [], 0
+    while len(d) - i > 4:
+        groups.append(d[i:i + 3])
+        i += 3
+    groups.append(d[i:])
+    return ", ".join(" ".join(g) for g in groups)
 
 
 def value_parts(raw: str, facts: dict, lang: str) -> list[tuple[str, str]] | None:

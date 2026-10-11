@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..clients.llm import Item, TurnJSON
-from ..models import Call, Customer, CustomerProfile, Invoice, Merchant, MerchantUser, MissedDemand, Product, StockMovement
+from ..models import Call, Customer, CustomerProfile, Invoice, Merchant, MerchantUser, MissedDemand, Notification, Product, StockMovement, VirtualAccount
 from ..services import advice as advice_svc
 from ..services import orders as order_svc
 from ..services import reports
@@ -96,7 +96,20 @@ class DialogueManager:
         self.st["ack_i"] += 1
         return ack
 
+    def _payment_reply(self, key: str, facts: dict) -> tuple[str, dict]:
+        """After an order is placed to be paid by transfer, the account number is read aloud as well as texted, so a text that is late, or never
+        arrives, does not stop the customer paying. Without an account to read (the wallet takes payment instead) the reply is left as it is."""
+        acct = self.db.scalar(select(VirtualAccount).where(VirtualAccount.customer_id == self.customer.id, VirtualAccount.merchant_id == self.merchant.id))
+        if not acct or not acct.account_number:
+            return key, facts
+        texted = self.db.scalar(select(Notification.status).where(Notification.customer_id == self.customer.id, Notification.merchant_id == self.merchant.id,
+                                                                  Notification.template == "invoice").order_by(Notification.created_at.desc()).limit(1))
+        facts = {**facts, "bank_name": acct.bank_name, "account_number": templates.read_digits(acct.account_number)}
+        return ("order_placed_account" if texted in ("sent", "mock_sent") else "order_placed_account_aloud"), facts
+
     def reply(self, key: str, *, end: bool = False, action: str | None = None, **facts) -> Outcome:
+        if key == "order_placed_transfer":
+            key, facts = self._payment_reply(key, facts)
         spoken = self.L(key)
         raw = templates.pick(key, spoken, self.st["turn"])
         facts = {"merchant": self.merchant.name, "name": self.customer.name or "", **facts}
