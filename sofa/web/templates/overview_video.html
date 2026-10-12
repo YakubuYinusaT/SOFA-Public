@@ -15,8 +15,8 @@
 {% block body %}
 {% if demo.kind %}
 <section class="card" aria-labelledby="v-play">
-  <p class="eyebrow">The demo</p><h3 id="v-play">A real call, start to finish</h3>
-  {{ media(demo, "The demo: a real call to Talk, start to finish", "A real call to Talk, and what the shop owner sees.", "Watch the demo") }}
+  <p class="eyebrow">The demo</p><h3 id="v-play">A call, from start to finish</h3>
+  {{ media(demo, "The demo: a call from start to finish", "A call to Talk, and what the shop owner sees.", "Watch the demo") }}
 </section>
 {% if s.hub_story_video_url %}
 <section class="card" aria-labelledby="v-story">
@@ -28,7 +28,7 @@
 <section class="card" aria-labelledby="v-wait">
   <p class="eyebrow">This page holds the demo</p>
   <h3 id="v-wait">The demo video plays here</h3>
-  <p class="small">It follows one real call to Talk: the greeting, a question about the store, an order, the payment details by text message, and the order appearing in the shop owner's portal.</p>
+  <p class="small">It follows one call to Talk: the greeting, a question about the store, an order, the payment details by text message, and the order appearing in the shop owner's portal.</p>
   <p class="small">The same call can be tried now, live.</p>
   <div class="actions">
     {% if s.hub_test_number %}<a class="btn" href="tel:{{ s.hub_test_number|replace(' ', '') }}">Call {{ s.hub_test_number }}</a>{% endif %}
