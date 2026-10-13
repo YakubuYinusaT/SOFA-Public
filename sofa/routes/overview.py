@@ -115,12 +115,23 @@ def demo_video_url(settings) -> str:
     return next((f"/overview/files/{name}" for name in DEMO_FILES if (folder / name).is_file()), "")
 
 
+def demo_captions_url(settings, demo_url: str) -> str:
+    """The caption track for a demo video that is a file in the overview folder: the file with the same name and a .vtt ending (demo.mp4 gets demo.vtt),
+    used only when it is there. A video given as an address elsewhere carries its own captions."""
+    prefix = "/overview/files/"
+    if not demo_url.startswith(prefix):
+        return ""
+    stem = demo_url[len(prefix):].rsplit(".", 1)[0]
+    name = f"{stem}.vtt"
+    return f"{prefix}{name}" if (Path(settings.storage_dir).resolve() / "overview" / name).is_file() else ""
+
+
 def context(request: Request, **extra) -> dict:
     s = request.app.state.svc.settings
     deck = len(ui.deck_slides(s))
     demo_url = demo_video_url(s)
     return {"request": request, "brand": "Talk", "footer_kind": "naic", "home_url": "/overview", "active": "", "s": s, "deck": deck,
-            "story": video_embed(s.hub_story_video_url), "demo": video_embed(demo_url),
+            "story": video_embed(s.hub_story_video_url), "demo": video_embed(demo_url), "demo_captions": demo_captions_url(s, demo_url),
             "has_watch": bool(s.hub_story_video_url or demo_url or s.hub_audio_url or deck), "demo_page": s.demo_page_enabled, **extra}
 
 
@@ -177,7 +188,7 @@ def deck_slide(name: str, request: Request, _=Depends(enabled)):
 
 
 FILE_TYPES = {"pdf": "application/pdf", "mp3": "audio/mpeg", "m4a": "audio/mp4", "wav": "audio/wav", "mp4": "video/mp4", "webm": "video/webm",
-              "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
+              "vtt": "text/vtt", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
 
 
 @router.get("/files/{name}")

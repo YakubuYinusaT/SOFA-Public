@@ -10,8 +10,8 @@
     <h1 id="ov-title">Talk: an AI agent that serves you over a phone call.</h1>
     <p class="lede">Digital services for people with no smartphone and no data. Talk is powered by SOFA, our own agentic AI engine, built on N-ATLaS.</p>
     <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-5)">
-      {% if demo_page %}<a class="btn" href="/demo">Try the live demo</a>{% endif %}
-      <a class="btn ghost" href="#test">Test it by phone</a>
+      <a class="btn" href="#test">Try it by phone</a>
+      {% if demo_page %}<a class="btn ghost" href="/demo">See live calls</a>{% endif %}
       <a class="btn ghost" href="#partner">Partner with us</a>
     </div>
   </div>
@@ -25,7 +25,7 @@
 {{ rule(n.v, "Watch and listen") }}{% set n.v = n.v + 1 %}
 <div class="cols two">
   {% if s.hub_story_video_url %}<section class="card"><p class="eyebrow">The story</p><h3>The problem and what we built</h3>{{ media(story, "The story: the problem and what we built", "A short talk on the problem and how Talk solves it.", "Watch the story") }}</section>{% endif %}
-  {% if demo.kind %}<section class="card"><p class="eyebrow">The demo</p><h3>A call, from start to finish</h3>{{ media(demo, "The demo: a call from start to finish", "A call to Talk, and what the shop owner sees.", "Watch the demo") }}</section>{% endif %}
+  {% if demo.kind %}<section class="card"><p class="eyebrow">The demo</p><h3>A call, from start to finish</h3>{{ media(demo, "The demo: a call from start to finish", "A call to Talk, and what the shop owner sees.", "Watch the demo", demo_captions) }}</section>{% endif %}
   {% if deck %}<section class="card"><p class="eyebrow">Read</p><h3>The pitch deck</h3><p class="small">{{ deck }} slides: the problem, how Talk works, what already runs and where it goes next.</p><a class="btn" href="/overview/deck">View the deck</a></section>{% endif %}
   {% if s.hub_audio_url %}<section class="card"><p class="eyebrow">Listen</p><h3>The explainer</h3><p class="small">The problem and the solution, in our own voice.</p><audio controls preload="none" style="width:100%" src="{{ s.hub_audio_url }}"></audio></section>{% endif %}
 </div>

@@ -220,3 +220,29 @@ def test_the_demo_video_page_exists_before_the_video_and_plays_it_once_there_is_
     # a setting wins over the file
     with make(storage_dir=str(tmp_path), hub_demo_video_url="https://example.com/other.mp4") as c:
         assert "https://example.com/other.mp4" in c.get("/overview/video").text
+
+
+def test_the_demo_video_carries_its_captions_when_a_caption_file_sits_beside_it(tmp_path):
+    (tmp_path / "overview").mkdir()
+    (tmp_path / "overview" / "demo.mp4").write_bytes(b" ftypmp42 a tiny test file")
+    with make(storage_dir=str(tmp_path)) as c:
+        assert "<track" not in c.get("/overview/video").text  # no caption file yet: the player has none
+    (tmp_path / "overview" / "demo.vtt").write_text("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nTalk: Hello.\n", encoding="utf-8")
+    with make(storage_dir=str(tmp_path)) as c:
+        for path in ("/overview/video", "/overview"):
+            assert '<track kind="captions" src="/overview/files/demo.vtt" srclang="en" label="English" default>' in c.get(path).text, path
+        r = c.get("/overview/files/demo.vtt")
+        assert r.status_code == 200 and r.headers["content-type"].startswith("text/vtt") and r.text.startswith("WEBVTT")
+    with make(storage_dir=str(tmp_path), hub_demo_video_url="https://example.com/other.mp4") as c:
+        assert "<track" not in c.get("/overview/video").text  # a video kept elsewhere brings its own captions
+
+
+def test_the_first_button_on_the_overview_leads_to_the_phone_number():
+    with make(hub_test_number="+2348000000000", demo_page_enabled=True) as c:
+        page = c.get("/overview").text
+        hero = page.split('id="ov-title"')[1].split("</section>")[0]
+        assert "Try it by phone" in hero and "See live calls" in hero and hero.index('href="#test"') < hero.index('href="/demo"')
+        assert 'id="test"' in page and "tel:+2348000000000" in page  # the button lands on the section that shows the number
+    with make() as c:
+        page = c.get("/overview").text
+        assert "Try it by phone" in page and "See live calls" not in page
