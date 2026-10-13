@@ -115,14 +115,13 @@ def demo_video_url(settings) -> str:
     return next((f"/overview/files/{name}" for name in DEMO_FILES if (folder / name).is_file()), "")
 
 
-def demo_captions_url(settings, demo_url: str) -> str:
-    """The caption track for a demo video that is a file in the overview folder: the file with the same name and a .vtt ending (demo.mp4 gets demo.vtt),
-    used only when it is there. A video given as an address elsewhere carries its own captions."""
+def demo_sidecar_url(settings, demo_url: str, ext: str) -> str:
+    """A file kept beside a demo video in the overview folder, with the same name and another ending: the caption track (demo.vtt) or the picture
+    shown before play (demo.jpg) of demo.mp4. Used only when it is there. A video given as an address elsewhere carries its own."""
     prefix = "/overview/files/"
     if not demo_url.startswith(prefix):
         return ""
-    stem = demo_url[len(prefix):].rsplit(".", 1)[0]
-    name = f"{stem}.vtt"
+    name = f"{demo_url[len(prefix):].rsplit('.', 1)[0]}.{ext}"
     return f"{prefix}{name}" if (Path(settings.storage_dir).resolve() / "overview" / name).is_file() else ""
 
 
@@ -131,7 +130,8 @@ def context(request: Request, **extra) -> dict:
     deck = len(ui.deck_slides(s))
     demo_url = demo_video_url(s)
     return {"request": request, "brand": "Talk", "footer_kind": "naic", "home_url": "/overview", "active": "", "s": s, "deck": deck,
-            "story": video_embed(s.hub_story_video_url), "demo": video_embed(demo_url), "demo_captions": demo_captions_url(s, demo_url),
+            "story": video_embed(s.hub_story_video_url), "demo": video_embed(demo_url), "demo_captions": demo_sidecar_url(s, demo_url, "vtt"),
+            "demo_poster": demo_sidecar_url(s, demo_url, "jpg"),
             "has_watch": bool(s.hub_story_video_url or demo_url or s.hub_audio_url or deck), "demo_page": s.demo_page_enabled, **extra}
 
 

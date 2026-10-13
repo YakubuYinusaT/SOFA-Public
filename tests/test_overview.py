@@ -237,6 +237,20 @@ def test_the_demo_video_carries_its_captions_when_a_caption_file_sits_beside_it(
         assert "<track" not in c.get("/overview/video").text  # a video kept elsewhere brings its own captions
 
 
+def test_the_demo_video_shows_its_poster_picture_when_one_sits_beside_it(tmp_path):
+    (tmp_path / "overview").mkdir()
+    (tmp_path / "overview" / "demo.mp4").write_bytes(b" ftypmp42 a tiny test file")
+    with make(storage_dir=str(tmp_path)) as c:
+        assert "poster=" not in c.get("/overview/video").text  # no picture yet: the player shows the first frame as before
+    (tmp_path / "overview" / "demo.jpg").write_bytes(b"\xff\xd8\xff a tiny test picture")
+    with make(storage_dir=str(tmp_path)) as c:
+        for path in ("/overview/video", "/overview"):
+            assert 'poster="/overview/files/demo.jpg"' in c.get(path).text, path
+        assert c.get("/overview/files/demo.jpg").headers["content-type"] == "image/jpeg"
+    with make(storage_dir=str(tmp_path), hub_demo_video_url="https://example.com/other.mp4") as c:
+        assert "poster=" not in c.get("/overview/video").text  # a video kept elsewhere brings its own picture
+
+
 def test_the_first_button_on_the_overview_leads_to_the_phone_number():
     with make(hub_test_number="+2348000000000", demo_page_enabled=True) as c:
         page = c.get("/overview").text
