@@ -71,7 +71,7 @@ that has no translation is spoken in English. More languages are added by listin
    and events at `/voice/events/<secret>`. `PUBLIC_BASE_URL` is the public HTTPS address (it is
    embedded in the audio URLs). See `docs/at_number_setup.md`.
 4. **Paystack**: `PAYSTACK_SECRET_KEY`, and a webhook to `https://HOST/webhooks/paystack`.
-5. **Google search**: `GOOGLE_API_KEY` and `GOOGLE_CSE_ID`.
+5. **Search**: `BRAVE_API_KEY` (Brave Search, used first), or the older `GOOGLE_API_KEY` and `GOOGLE_CSE_ID`.
 6. `python -m scripts.warm_cache` pre-generates the audio for fixed phrases.
 
 To put the whole backend on a fresh Ubuntu 24.04 server with automatic HTTPS, run `deploy/setup_server.sh`

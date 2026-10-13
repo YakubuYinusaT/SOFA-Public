@@ -81,6 +81,35 @@ def test_google_is_used_when_its_keys_are_set_and_the_offline_facts_otherwise(se
     assert isinstance(build_search(settings), GoogleSearch)
 
 
+def test_brave_comes_first_when_its_key_is_set(settings):
+    from sofa.clients.search import BraveSearch
+    settings.google_api_key, settings.google_cse_id = "k", "cx"
+    assert isinstance(build_search(settings), GoogleSearch)
+    settings.brave_api_key = "b"
+    assert isinstance(build_search(settings), BraveSearch)
+
+
+def test_the_brave_reply_is_turned_into_plain_results(monkeypatch):
+    import asyncio
+
+    import httpx
+
+    from sofa.clients.search import BraveSearch
+
+    def handler(request):
+        assert request.headers["X-Subscription-Token"] == "brave-key"
+        assert request.url.params["q"] == "capital of ghana" and request.url.params["count"] == "3"
+        return httpx.Response(200, json={"web": {"results": [
+            {"title": "<strong>Ghana</strong> &amp; Accra", "description": "<strong>Accra</strong> is\nthe capital.", "url": "https://x.test"}]}})
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler), **kw))
+    out = asyncio.run(BraveSearch("brave-key").search("capital of ghana"))
+    assert out == [Result("Ghana & Accra", "Accra is the capital.", "https://x.test")]
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})), **kw))
+    assert asyncio.run(BraveSearch("brave-key").search("nothing")) == []  # no web section: nothing found, no crash
+
+
 def test_the_google_reply_is_turned_into_results(monkeypatch):
     import asyncio
 

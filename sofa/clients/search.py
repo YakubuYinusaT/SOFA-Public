@@ -1,11 +1,14 @@
 """Where SOFA looks things up. One small interface, `search(query)`, so the source can change without touching the conversation.
 
-`GoogleSearch` calls Google's Programmable Search JSON API (needs GOOGLE_API_KEY and GOOGLE_CSE_ID). With no keys, `OfflineSearch`
-answers from a small set of built-in facts so the whole flow can be demonstrated and tested; it says "nothing found" for anything
-else and never invents an answer.
+`BraveSearch` calls the Brave Search API, which has its own web index (needs BRAVE_API_KEY). `GoogleSearch` calls Google's Programmable Search
+JSON API (needs GOOGLE_API_KEY and GOOGLE_CSE_ID); Google closed that API to new projects and ends it on 1 January 2027. With no keys,
+`OfflineSearch` answers from a small set of built-in facts so the whole flow can be demonstrated and tested; it says "nothing found" for
+anything else and never invents an answer.
 """
 
+import html
 import logging
+import re
 from dataclasses import dataclass
 
 import httpx
@@ -56,7 +59,30 @@ class GoogleSearch:
         return [Result(i.get("title", ""), (i.get("snippet") or "").replace("\n", " "), i.get("link", "")) for i in resp.json().get("items", [])[:limit]]
 
 
+def _plain(text: str) -> str:
+    """A snippet as plain words: no markup, no entities, one line."""
+    return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", text))).strip()
+
+
+class BraveSearch:
+    """Brave Search API: GET /res/v1/web/search, the key in the X-Subscription-Token header, results under web.results."""
+    URL = "https://api.search.brave.com/res/v1/web/search"
+
+    def __init__(self, api_key: str, timeout: float = 6.0):
+        self.key, self.timeout = api_key, timeout
+
+    async def search(self, query: str, limit: int = 3) -> list[Result]:
+        params = {"q": query[:200], "count": limit, "search_lang": "en", "safesearch": "strict", "text_decorations": "false"}
+        async with httpx.AsyncClient(timeout=self.timeout) as http:
+            resp = await http.get(self.URL, params=params, headers={"X-Subscription-Token": self.key, "Accept": "application/json"})
+        resp.raise_for_status()
+        found = (resp.json().get("web") or {}).get("results") or []
+        return [Result(_plain(i.get("title", "")), _plain(i.get("description") or ""), i.get("url", "")) for i in found[:limit]]
+
+
 def build_search(settings):
+    if settings.brave_api_key:
+        return BraveSearch(settings.brave_api_key, settings.search_timeout_seconds)
     if settings.google_api_key and settings.google_cse_id:
         return GoogleSearch(settings.google_api_key, settings.google_cse_id, settings.search_timeout_seconds)
     return OfflineSearch()

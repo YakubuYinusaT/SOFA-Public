@@ -64,6 +64,7 @@ class Settings(BaseSettings):
 
     # The one number callers dial to reach SOFA itself (the personal assistant) instead of a shop. Empty = gateway off.
     gateway_number: str = ""
+    brave_api_key: str = ""          # information search: Brave Search API, used first when set
     google_api_key: str = ""         # information search: Google Programmable Search; with no keys a small offline set of facts answers
     google_cse_id: str = ""
     search_timeout_seconds: float = 6.0
